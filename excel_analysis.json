@@ -1,0 +1,90 @@
+{
+  "main_sheet": "Sheet2",
+  "columns": [
+    "Date",
+    "Requirement",
+    "Country",
+    "Req Location",
+    "Client Name",
+    "Candidate Name",
+    "Interview Status",
+    "Interview Date",
+    "Unnamed: 8",
+    "Status",
+    "E-mail",
+    "phone number "
+  ],
+  "total_rows": 24,
+  "sample_data": [
+    {
+      "Date": "2025-10-08 00:00:00",
+      "Requirement": "Checkpoint/Firewall SME",
+      "Country": "USA",
+      "Req Location": "Frisco TX",
+      "Client Name": "Mobile Comm",
+      "Candidate Name": "",
+      "Interview Status": "",
+      "Interview Date": "",
+      "Unnamed: 8": "",
+      "Status": "",
+      "E-mail": "",
+      "phone number ": ""
+    },
+    {
+      "Date": "2025-10-10 00:00:00",
+      "Requirement": "Data Governance with collibra",
+      "Country": "Canada",
+      "Req Location": "Toronto",
+      "Client Name": "CBRE",
+      "Candidate Name": "Gautam Shah",
+      "Interview Status": "",
+      "Interview Date": "",
+      "Unnamed: 8": "",
+      "Status": "Offered",
+      "E-mail": "gshah1223@gmail.com",
+      "phone number ": "647-512-3125"
+    },
+    {
+      "Date": "2025-09-07 00:00:00",
+      "Requirement": "Senior Spark Developer",
+      "Country": "Canada",
+      "Req Location": "Toronto",
+      "Client Name": "CPPIB",
+      "Candidate Name": "Pranav Vashist",
+      "Interview Status": "Scheduled",
+      "Interview Date": "",
+      "Unnamed: 8": "",
+      "Status": "Rejected in CPPIB interview",
+      "E-mail": "",
+      "phone number ": ""
+    },
+    {
+      "Date": "2025-10-22 00:00:00",
+      "Requirement": "Snowflake Developer",
+      "Country": "USA",
+      "Req Location": "Dallas TX",
+      "Client Name": "CBRE",
+      "Candidate Name": "Praveen Kumar, Mallarjuna, Venkateswara Evuri\n",
+      "Interview Status": "",
+      "Interview Date": "",
+      "Unnamed: 8": "",
+      "Status": "submitted Mallikarjuna - waiting for interview",
+      "E-mail": "rajamallikarjuna205@gmail.com",
+      "phone number ": "Rajamallikarjuna205@gmail.com\n\n+1(945)297-6862"
+    },
+    {
+      "Date": "2025-10-27 00:00:00",
+      "Requirement": "Business Analyst with real estate",
+      "Country": "USA",
+      "Req Location": "Dallas TX",
+      "Client Name": "CBRE",
+      "Candidate Name": "Pratap Karthikeya Papineni, Shadid Rezwan\n",
+      "Interview Status": "",
+      "Interview Date": "",
+      "Unnamed: 8": "",
+      "Status": "submitted Pratap",
+      "E-mail": "pratapkarthikeya@gmail.com",
+      "phone number ": 14699880119
+    }
+  ]
+}
