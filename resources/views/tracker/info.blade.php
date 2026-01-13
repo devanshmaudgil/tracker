@@ -536,73 +536,70 @@
         currentTrackerCandidateId = trackerCandidateId;
         const modal = document.getElementById('pipelineModal');
         const form = document.getElementById('pipelineForm');
-        const row = document.querySelector(`tr[data-tracker-candidate-id="${trackerCandidateId}"]`);
         
         form.action = `/tracker/info/{{ $trackerInfo->id }}/candidates/${trackerCandidateId}/pipeline`;
         
-        // Load data instantly from data attributes if row exists
-        if (row) {
-            document.getElementById('candidate_identified').checked = row.dataset.candidateIdentified === '1';
-            document.getElementById('resume_reviewed_by_recruiter').value = row.dataset.resumeReviewed || '';
-            document.getElementById('resume_reviewed_date').value = row.dataset.resumeReviewedDate || '';
-            document.getElementById('recruiter_screening_call').value = row.dataset.recruiterScreening || '';
-            document.getElementById('recruiter_screening_call_date').value = row.dataset.recruiterScreeningDate || '';
-            document.getElementById('candidate_shortlisted').checked = row.dataset.shortlisted === '1';
-            document.getElementById('resume_submitted_to_client').value = row.dataset.resumeSubmitted || '';
-            document.getElementById('radix_internal_interview_prep').value = row.dataset.radixPrep || '';
-            document.getElementById('radix_internal_interview_prep_date').value = row.dataset.radixPrepDate || '';
-            document.getElementById('client_resume_review').value = row.dataset.clientReview || '';
-            document.getElementById('client_interview_round_1_date').value = row.dataset.interviewRound1 || '';
-            document.getElementById('client_interview_round_2_date').value = row.dataset.interviewRound2 || '';
-            document.getElementById('additional_rounds').checked = row.dataset.additionalRounds === '1';
-            document.getElementById('client_decision').value = row.dataset.clientDecision || '';
-            document.getElementById('client_decision_date').value = row.dataset.clientDecisionDate || '';
-            document.getElementById('client_confirmation_received').checked = row.dataset.confirmationReceived === '1';
-            document.getElementById('client_confirmation_date').value = row.dataset.confirmationDate || '';
-            document.getElementById('offer_extended_to_candidate').checked = row.dataset.offerExtended === '1';
-            document.getElementById('offer_extended_date').value = row.dataset.offerExtendedDate || '';
-            document.getElementById('background_check').value = row.dataset.backgroundCheck || '';
-            document.getElementById('candidate_project_start_date').value = row.dataset.projectStart || '';
-            document.getElementById('final_status_placement_completion').value = row.dataset.finalStatus || '';
-            document.getElementById('placement_completion_date').value = row.dataset.placementDate || '';
-            
-            modal.style.display = 'block';
-        } else {
-            // Fallback: Fetch from API
-            fetch(`/tracker/info/{{ $trackerInfo->id }}/candidates/${trackerCandidateId}/pipeline`)
-                .then(response => response.json())
-                .then(data => {
-                    document.getElementById('candidate_identified').checked = data.candidate_identified || false;
-                    document.getElementById('resume_reviewed_by_recruiter').value = data.resume_reviewed_by_recruiter || '';
-                    document.getElementById('resume_reviewed_date').value = data.resume_reviewed_date || '';
-                    document.getElementById('recruiter_screening_call').value = data.recruiter_screening_call || '';
-                    document.getElementById('recruiter_screening_call_date').value = data.recruiter_screening_call_date || '';
-                    document.getElementById('candidate_shortlisted').checked = data.candidate_shortlisted || false;
-                    document.getElementById('resume_submitted_to_client').value = data.resume_submitted_to_client || '';
-                    document.getElementById('radix_internal_interview_prep').value = data.radix_internal_interview_prep || '';
-                    document.getElementById('radix_internal_interview_prep_date').value = data.radix_internal_interview_prep_date || '';
-                    document.getElementById('client_resume_review').value = data.client_resume_review || '';
-                    document.getElementById('client_interview_round_1_date').value = data.client_interview_round_1_date || '';
-                    document.getElementById('client_interview_round_2_date').value = data.client_interview_round_2_date || '';
-                    document.getElementById('additional_rounds').checked = data.additional_rounds || false;
-                    document.getElementById('client_decision').value = data.client_decision || '';
-                    document.getElementById('client_decision_date').value = data.client_decision_date || '';
-                    document.getElementById('client_confirmation_received').checked = data.client_confirmation_received || false;
-                    document.getElementById('client_confirmation_date').value = data.client_confirmation_date || '';
-                    document.getElementById('offer_extended_to_candidate').checked = data.offer_extended_to_candidate || false;
-                    document.getElementById('offer_extended_date').value = data.offer_extended_date || '';
-                    document.getElementById('background_check').value = data.background_check || '';
-                    document.getElementById('candidate_project_start_date').value = data.candidate_project_start_date || '';
-                    document.getElementById('final_status_placement_completion').value = data.final_status_placement_completion || '';
-                    document.getElementById('placement_completion_date').value = data.placement_completion_date || '';
-                    
-                    modal.style.display = 'block';
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    modal.style.display = 'block';
-                });
-        }
+        // Always fetch from API to ensure we have the latest data from database
+        fetch(`/tracker/info/{{ $trackerInfo->id }}/candidates/${trackerCandidateId}/pipeline`)
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('candidate_identified').checked = data.candidate_identified || false;
+                document.getElementById('resume_reviewed_by_recruiter').value = data.resume_reviewed_by_recruiter || '';
+                document.getElementById('resume_reviewed_date').value = data.resume_reviewed_date || '';
+                document.getElementById('recruiter_screening_call').value = data.recruiter_screening_call || '';
+                document.getElementById('recruiter_screening_call_date').value = data.recruiter_screening_call_date || '';
+                document.getElementById('candidate_shortlisted').checked = data.candidate_shortlisted || false;
+                document.getElementById('resume_submitted_to_client').value = data.resume_submitted_to_client || '';
+                document.getElementById('radix_internal_interview_prep').value = data.radix_internal_interview_prep || '';
+                document.getElementById('radix_internal_interview_prep_date').value = data.radix_internal_interview_prep_date || '';
+                document.getElementById('client_resume_review').value = data.client_resume_review || '';
+                document.getElementById('client_interview_round_1_date').value = data.client_interview_round_1_date || '';
+                document.getElementById('client_interview_round_2_date').value = data.client_interview_round_2_date || '';
+                document.getElementById('additional_rounds').checked = data.additional_rounds || false;
+                document.getElementById('client_decision').value = data.client_decision || '';
+                document.getElementById('client_decision_date').value = data.client_decision_date || '';
+                document.getElementById('client_confirmation_received').checked = data.client_confirmation_received || false;
+                document.getElementById('client_confirmation_date').value = data.client_confirmation_date || '';
+                document.getElementById('offer_extended_to_candidate').checked = data.offer_extended_to_candidate || false;
+                document.getElementById('offer_extended_date').value = data.offer_extended_date || '';
+                document.getElementById('background_check').value = data.background_check || '';
+                document.getElementById('candidate_project_start_date').value = data.candidate_project_start_date || '';
+                document.getElementById('final_status_placement_completion').value = data.final_status_placement_completion || '';
+                document.getElementById('placement_completion_date').value = data.placement_completion_date || '';
+                
+                modal.style.display = 'block';
+            })
+            .catch(error => {
+                console.error('Error fetching pipeline data:', error);
+                // Fallback to data attributes if API fails
+                const row = document.querySelector(`tr[data-tracker-candidate-id="${trackerCandidateId}"]`);
+                if (row) {
+                    document.getElementById('candidate_identified').checked = row.dataset.candidateIdentified === '1';
+                    document.getElementById('resume_reviewed_by_recruiter').value = row.dataset.resumeReviewed || '';
+                    document.getElementById('resume_reviewed_date').value = row.dataset.resumeReviewedDate || '';
+                    document.getElementById('recruiter_screening_call').value = row.dataset.recruiterScreening || '';
+                    document.getElementById('recruiter_screening_call_date').value = row.dataset.recruiterScreeningDate || '';
+                    document.getElementById('candidate_shortlisted').checked = row.dataset.shortlisted === '1';
+                    document.getElementById('resume_submitted_to_client').value = row.dataset.resumeSubmitted || '';
+                    document.getElementById('radix_internal_interview_prep').value = row.dataset.radixPrep || '';
+                    document.getElementById('radix_internal_interview_prep_date').value = row.dataset.radixPrepDate || '';
+                    document.getElementById('client_resume_review').value = row.dataset.clientReview || '';
+                    document.getElementById('client_interview_round_1_date').value = row.dataset.interviewRound1 || '';
+                    document.getElementById('client_interview_round_2_date').value = row.dataset.interviewRound2 || '';
+                    document.getElementById('additional_rounds').checked = row.dataset.additionalRounds === '1';
+                    document.getElementById('client_decision').value = row.dataset.clientDecision || '';
+                    document.getElementById('client_decision_date').value = row.dataset.clientDecisionDate || '';
+                    document.getElementById('client_confirmation_received').checked = row.dataset.confirmationReceived === '1';
+                    document.getElementById('client_confirmation_date').value = row.dataset.confirmationDate || '';
+                    document.getElementById('offer_extended_to_candidate').checked = row.dataset.offerExtended === '1';
+                    document.getElementById('offer_extended_date').value = row.dataset.offerExtendedDate || '';
+                    document.getElementById('background_check').value = row.dataset.backgroundCheck || '';
+                    document.getElementById('candidate_project_start_date').value = row.dataset.projectStart || '';
+                    document.getElementById('final_status_placement_completion').value = row.dataset.finalStatus || '';
+                    document.getElementById('placement_completion_date').value = row.dataset.placementDate || '';
+                }
+                modal.style.display = 'block';
+            });
     }
 
     function closePipelineModal() {
@@ -886,4 +883,4 @@
     </div>
 </div>
 @endsection
-<!--sample push>
+

@@ -22,6 +22,7 @@ class TrackerInfo extends Model
         'submission_deadline',
         'lr',
         'csi',
+        'job_status_FK',
     ];
 
     protected function casts(): array
@@ -62,5 +63,42 @@ class TrackerInfo extends Model
         return $this->belongsToMany(Candidate::class, 'tracker_candidates', 'tracker_info_id', 'candidate_id')
                     ->withPivot('id')
                     ->withTimestamps();
+    }
+    public function jobStatus()
+    {
+        return $this->belongsTo(JobStatus::class, 'job_status_FK');
+    }
+
+    public function updateStatusFromCandidates()
+    {
+        $candidates = $this->trackerCandidates;
+        $totalCandidates = $candidates->count();
+        
+        if ($totalCandidates == 0) {
+            if ($this->job_status_FK != 1) {
+                $this->update(['job_status_FK' => 1]); // Demand Raised
+            }
+            return;
+        }
+
+        $statusCounts = $candidates->groupBy('current_status_id')
+            ->map(function ($group) {
+                return $group->count();
+            });
+
+        $majorityThreshold = $totalCandidates / 2;
+        $newStatusId = null;
+
+        foreach ($statusCounts as $statusId => $count) {
+            if ($count > $majorityThreshold) {
+                $newStatusId = $statusId;
+                break;
+            }
+        }
+
+        // If a status has majority, update the job status
+        if ($newStatusId && $this->job_status_FK != $newStatusId) {
+            $this->update(['job_status_FK' => $newStatusId]);
+        }
     }
 }

@@ -1,0 +1,133 @@
+﻿Checking candidates for Tracker ID: 4
+Candidate: Rahul (TC ID: 5, Candidate ID: 3)
+Current Status ID: 12
+Pipeline Status Found (ID: 5):
+ - Raw Data: {
+    "id": 5,
+    "tracker_candidate_id": 5,
+    "candidate_identified": true,
+    "resume_reviewed_by_recruiter": "Completed",
+    "resume_reviewed_date": "2026-01-14T00:00:00.000000Z",
+    "recruiter_screening_call": "Completed",
+    "recruiter_screening_call_date": "2026-01-14T00:00:00.000000Z",
+    "candidate_shortlisted": true,
+    "resume_submitted_to_client": "Submitted",
+    "radix_internal_interview_prep": "Not Required",
+    "radix_internal_interview_prep_date": null,
+    "client_resume_review": "Approved",
+    "client_interview_round_1_date": null,
+    "client_interview_round_2_date": null,
+    "additional_rounds": false,
+    "client_decision": null,
+    "client_decision_date": null,
+    "client_confirmation_received": false,
+    "client_confirmation_date": null,
+    "offer_extended_to_candidate": false,
+    "offer_extended_date": null,
+    "background_check": null,
+    "candidate_project_start_date": null,
+    "final_status_placement_completion": null,
+    "placement_completion_date": null,
+    "created_at": "2026-01-08T15:51:24.000000Z",
+    "updated_at": "2026-01-13T21:25:33.000000Z"
+}
+-----------------------------------
+Candidate: New Candidate (TC ID: 6, Candidate ID: 4)
+Current Status ID: 
+Pipeline Status Found (ID: 6):
+ - Raw Data: {
+    "id": 6,
+    "tracker_candidate_id": 6,
+    "candidate_identified": true,
+    "resume_reviewed_by_recruiter": null,
+    "resume_reviewed_date": null,
+    "recruiter_screening_call": null,
+    "recruiter_screening_call_date": null,
+    "candidate_shortlisted": false,
+    "resume_submitted_to_client": null,
+    "radix_internal_interview_prep": null,
+    "radix_internal_interview_prep_date": null,
+    "client_resume_review": null,
+    "client_interview_round_1_date": null,
+    "client_interview_round_2_date": null,
+    "additional_rounds": false,
+    "client_decision": null,
+    "client_decision_date": null,
+    "client_confirmation_received": false,
+    "client_confirmation_date": null,
+    "offer_extended_to_candidate": false,
+    "offer_extended_date": null,
+    "background_check": null,
+    "candidate_project_start_date": null,
+    "final_status_placement_completion": null,
+    "placement_completion_date": null,
+    "created_at": "2026-01-09T15:17:10.000000Z",
+    "updated_at": "2026-01-13T19:35:02.000000Z"
+}
+-----------------------------------
+Candidate: Devansh2 (TC ID: 8, Candidate ID: 6)
+Current Status ID: 
+Pipeline Status Found (ID: 8):
+ - Raw Data: {
+    "id": 8,
+    "tracker_candidate_id": 8,
+    "candidate_identified": true,
+    "resume_reviewed_by_recruiter": null,
+    "resume_reviewed_date": null,
+    "recruiter_screening_call": null,
+    "recruiter_screening_call_date": null,
+    "candidate_shortlisted": false,
+    "resume_submitted_to_client": null,
+    "radix_internal_interview_prep": null,
+    "radix_internal_interview_prep_date": null,
+    "client_resume_review": null,
+    "client_interview_round_1_date": null,
+    "client_interview_round_2_date": null,
+    "additional_rounds": false,
+    "client_decision": null,
+    "client_decision_date": null,
+    "client_confirmation_received": false,
+    "client_confirmation_date": null,
+    "offer_extended_to_candidate": false,
+    "offer_extended_date": null,
+    "background_check": null,
+    "candidate_project_start_date": null,
+    "final_status_placement_completion": null,
+    "placement_completion_date": null,
+    "created_at": "2026-01-09T16:46:19.000000Z",
+    "updated_at": "2026-01-13T19:35:02.000000Z"
+}
+-----------------------------------
+Candidate: Devansh Maudgil (TC ID: 9, Candidate ID: 7)
+Current Status ID: 2
+Pipeline Status Found (ID: 9):
+ - Raw Data: {
+    "id": 9,
+    "tracker_candidate_id": 9,
+    "candidate_identified": true,
+    "resume_reviewed_by_recruiter": null,
+    "resume_reviewed_date": null,
+    "recruiter_screening_call": null,
+    "recruiter_screening_call_date": null,
+    "candidate_shortlisted": false,
+    "resume_submitted_to_client": null,
+    "radix_internal_interview_prep": null,
+    "radix_internal_interview_prep_date": null,
+    "client_resume_review": null,
+    "client_interview_round_1_date": null,
+    "client_interview_round_2_date": null,
+    "additional_rounds": false,
+    "client_decision": null,
+    "client_decision_date": null,
+    "client_confirmation_received": false,
+    "client_confirmation_date": null,
+    "offer_extended_to_candidate": false,
+    "offer_extended_date": null,
+    "background_check": null,
+    "candidate_project_start_date": null,
+    "final_status_placement_completion": null,
+    "placement_completion_date": null,
+    "created_at": "2026-01-13T19:31:42.000000Z",
+    "updated_at": "2026-01-13T19:35:02.000000Z"
+}
+-----------------------------------

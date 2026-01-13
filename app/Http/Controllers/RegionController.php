@@ -7,12 +7,30 @@ use Illuminate\Http\Request;
 
 class RegionController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $regions = Region::orderBy('region', 'asc')
+        $query = Region::query();
+
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function($q) use ($search) {
+                $q->where('city', 'like', "%{$search}%")
+                  ->orWhere('region', 'like', "%{$search}%");
+            });
+        }
+
+        $regions = $query->orderBy('region', 'asc')
             ->orderBy('city', 'asc')
-            ->get();
+            ->paginate(20);
         
+        if ($request->ajax()) {
+            return response()->json([
+                'table' => view('regions._table', compact('regions'))->render(),
+                'pagination' => $regions->appends(request()->query())->links('vendor.pagination.custom')->render(),
+                'count_text' => "Showing {$regions->firstItem()} to {$regions->lastItem()} of {$regions->total()} entries"
+            ]);
+        }
+
         return view('regions.index', compact('regions'));
     }
 

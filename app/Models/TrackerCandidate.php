@@ -9,6 +9,7 @@ class TrackerCandidate extends Model
     protected $fillable = [
         'tracker_info_id',
         'candidate_id',
+        'current_status_id',
     ];
 
     public function trackerInfo()
@@ -24,5 +25,10 @@ class TrackerCandidate extends Model
     public function pipelineStatus()
     {
         return $this->hasOne(CandidatePipelineStatus::class, 'tracker_candidate_id');
+    }
+
+    public function status()
+    {
+        return $this->belongsTo(JobStatus::class, 'current_status_id');
     }
 }

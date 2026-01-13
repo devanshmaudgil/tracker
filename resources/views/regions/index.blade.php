@@ -21,7 +21,109 @@
         font-size: 11px;
         white-space: nowrap;
     }
+    
+    .search-bar-container {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 15px;
+    }
+    
+    .results-count {
+        color: #666;
+        font-size: 14px;
+    }
+    
+    .search-input-wrapper {
+        width: 300px;
+    }
+    
+    .search-input-wrapper input {
+        width: 100%;
+        padding: 8px 12px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        font-size: 14px;
+    }
+    
+    .search-input-wrapper input:focus {
+        outline: none;
+        border-color: #f1cd86;
+    }
+    
+    .no-results-row {
+        display: none;
+    }
+    
+    /* Pagination Styling */
+    .pagination-container {
+        margin-top: 20px;
+        display: flex;
+        justify-content: center;
+    }
+    
+    .pagination {
+        display: flex;
+        list-style: none;
+        padding: 0;
+        gap: 5px;
+    }
+    
+    .pagination li {
+        display: inline-block;
+    }
+    
+    .pagination li a,
+    .pagination li span {
+        padding: 8px 12px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        color: #0a2d29;
+        text-decoration: none;
+        transition: all 0.3s;
+    }
+    
+    .pagination li a:hover {
+        background-color: #f1cd86;
+        border-color: #f1cd86;
+        color: #0a2d29;
+    }
+    
+    .pagination li.active span {
+        background-color: #0a2d29;
+        border-color: #0a2d29;
+        color: white;
+    }
+    
+    .pagination li.disabled span {
+        color: #999;
+        cursor: not-allowed;
+    }
+
+    .action-buttons {
+        display: flex;
+        justify-content: center;
+        gap: 10px;
+    }
 </style>
+
+<!-- Search Bar -->
+<div class="search-bar-container">
+    <div class="results-count" id="resultsCount">
+        @if($regions->total() > 0)
+            Showing {{ $regions->firstItem() }} to {{ $regions->lastItem() }} of {{ $regions->total() }} entries
+        @else
+            No entries found
+        @endif
+    </div>
+    <div class="search-input-wrapper">
+        <input type="text" 
+               id="searchInput" 
+               placeholder="Search by city or state..." 
+               value="{{ request('search') }}"
+               autocomplete="off">
+    </div>
+</div>
 
 <div class="table-container">
     <table>
@@ -32,31 +134,19 @@
                 <th>Actions</th>
             </tr>
         </thead>
-        <tbody>
-            @forelse($regions as $region)
-                <tr data-id="{{ $region->id }}"
-                    data-region="{{ $region->region }}"
-                    data-city="{{ $region->city ?? '' }}">
-                    <td>{{ $region->city ?? '-' }}</td>
-                    <td>{{ $region->region }}</td>
-                    <td>
-                        <div class="action-buttons">
-                            <button type="button" class="btn btn-secondary btn-sm" onclick="editRecord({{ $region->id }})" title="Edit">Edit</button>
-                            <form method="POST" action="{{ route('regions.destroy', $region->id) }}" style="display: inline;" onsubmit="return confirm('Are you sure you want to delete this region?');">
-                                @csrf
-                                @method('DELETE')
-                                <button type="submit" class="btn btn-danger btn-sm" title="Delete">Delete</button>
-                            </form>
-                        </div>
-                    </td>
-                </tr>
-            @empty
-                <tr>
-                    <td colspan="3" style="text-align: center; padding: 30px; color: #666;">No regions found. <a href="#" onclick="openModal(); return false;" style="color: #f1cd86;">Add your first region</a></td>
-                </tr>
-            @endforelse
+        <tbody id="regionsTableBody">
+            @include('regions._table')
         </tbody>
     </table>
+</div>
+
+<!-- Pagination -->
+<div id="paginationContainer">
+    @if($regions->hasPages())
+        <div class="pagination-container">
+            {{ $regions->appends(request()->query())->links('vendor.pagination.custom') }}
+        </div>
+    @endif
 </div>
 
 <!-- Modal -->
@@ -214,6 +304,55 @@
             closeModal();
         }
     }
+    // AJAX search and pagination functionality
+    document.addEventListener('DOMContentLoaded', function() {
+        const searchInput = document.getElementById('searchInput');
+        const tableBody = document.getElementById('regionsTableBody');
+        const paginationContainer = document.getElementById('paginationContainer');
+        const resultsCount = document.getElementById('resultsCount');
+        let debounceTimer;
+        
+        function fetchData(url, search = '') {
+            const fetchUrl = new URL(url);
+            if (search) {
+                fetchUrl.searchParams.set('search', search);
+            }
+            
+            fetch(fetchUrl, {
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                tableBody.innerHTML = data.table;
+                paginationContainer.innerHTML = data.pagination;
+                resultsCount.textContent = data.count_text;
+            })
+            .catch(error => console.error('Error:', error));
+        }
+
+        if (searchInput) {
+            searchInput.addEventListener('input', function() {
+                clearTimeout(debounceTimer);
+                const searchTerm = this.value;
+                debounceTimer = setTimeout(() => {
+                    fetchData('{{ route('regions.index') }}', searchTerm);
+                }, 500);
+            });
+        }
+
+        // Handle pagination clicks via AJAX
+        document.addEventListener('click', function(e) {
+            const paginationLink = e.target.closest('#paginationContainer a');
+            if (paginationLink) {
+                e.preventDefault();
+                const url = paginationLink.getAttribute('href');
+                const searchTerm = searchInput ? searchInput.value : '';
+                fetchData(url, searchTerm);
+            }
+        });
+    });
 </script>
 @endsection
 

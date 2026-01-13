@@ -19,6 +19,7 @@ class DatabaseSeeder extends Seeder
             UserLoginSeeder::class,
             ClientSeeder::class,
             RegionSeeder::class,
+            JobStatusSeeder::class,
         ]);
     }
 }

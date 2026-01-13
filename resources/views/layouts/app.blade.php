@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>@yield('title', 'Staffing Tracker')</title>
-    <link rel="icon" type="image/x-icon" href="{{ asset('favicon.ico') }}">
+    <link rel="icon" type="image/webp" href="{{ asset('favicon.webp') }}">
     <style>
         * {
             margin: 0;
@@ -41,13 +41,15 @@
             border-bottom: 1px solid rgba(255, 255, 255, 0.1);
         }
         .sidebar-header h2 {
-            color: white;
-            font-size: 20px;
-            white-space: nowrap;
-            overflow: hidden;
-        }
-        .sidebar.collapsed .sidebar-header h2 {
             display: none;
+        }
+        .sidebar-logo {
+            height: 40px;
+            width: auto;
+            transition: all 0.3s ease;
+        }
+        .sidebar.collapsed .sidebar-logo {
+            height: 30px;
         }
         .toggle-btn {
             background: none;
@@ -100,9 +102,34 @@
         }
         .main-content {
             margin-left: 250px;
-            padding: 30px;
+            padding: 20px; /* Reduced from 30px */
             flex: 1;
             transition: margin-left 0.3s ease;
+            min-width: 0; /* Allow content to shrink */
+        }
+        @media (max-width: 1200px) {
+            .main-content {
+                padding: 15px;
+            }
+        }
+        @media (max-width: 768px) {
+            .sidebar {
+                width: 60px;
+            }
+            .sidebar .sidebar-header h2,
+            .sidebar .sidebar-menu span {
+                display: none;
+            }
+            .sidebar .sidebar-menu a {
+                justify-content: center;
+            }
+            .sidebar .sidebar-menu .menu-icon {
+                margin-right: 0;
+            }
+            .main-content {
+                margin-left: 60px;
+                padding: 10px;
+            }
         }
         .sidebar.collapsed ~ .main-content {
             margin-left: 60px;
@@ -226,7 +253,7 @@
     <div class="app-container">
         <div class="sidebar" id="sidebar">
             <div class="sidebar-header">
-                <h2>Tracker</h2>
+                <img src="{{ asset('logo.png') }}" alt="Logo" class="sidebar-logo">
                 <button class="toggle-btn" onclick="toggleSidebar()">☰</button>
             </div>
             <ul class="sidebar-menu">

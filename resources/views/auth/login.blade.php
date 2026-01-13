@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - Staffing Tracker</title>
-    <link rel="icon" type="image/x-icon" href="{{ asset('favicon.ico') }}">
+    <title>Login - Radiix Infiniteii Tracker</title>
+    <link rel="icon" type="image/webp" href="{{ asset('favicon.webp') }}">
     <style>
         * {
             margin: 0;
@@ -117,7 +117,8 @@
 <body>
     <div class="login-container">
         <div class="login-header">
-            <h1>Staffing Tracker</h1>
+            <img src="{{ asset('logo.png') }}" alt="Radiix Infiniteii" style="height: 80px; width: auto; margin-bottom: 20px;">
+            <h1>Radiix Infiniteii Tracker</h1>
             <p>Sign in to your account</p>
         </div>
 
