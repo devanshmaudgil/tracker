@@ -5,7 +5,39 @@
 @section('content')
 <div class="content-header">
     <h1>Radiix Infiniteii Tracker</h1>
-    <a href="{{ route('tracker.create') }}" class="btn btn-primary">Add</a>
+    <div style="display: flex; gap: 10px;">
+        <a href="{{ route('tracker.import') }}" class="btn btn-secondary" title="Import Data from Excel">
+            <span style="margin-right: 5px;">📤</span> Import Excel
+        </a>
+        <button type="button" class="btn btn-secondary" onclick="openExportModal()" title="Export Filtered Data to Excel">
+            <span style="margin-right: 5px;">📥</span> Export Excel
+        </button>
+        <a href="{{ route('tracker.create') }}" class="btn btn-primary">Add</a>
+    </div>
+</div>
+
+<!-- Export Modal -->
+<div id="exportModal" class="modal" style="display: none; position: fixed; z-index: 1001; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.4);">
+    <div class="modal-content" style="background-color: #fefefe; margin: 15% auto; padding: 20px; border: 1px solid #888; width: 300px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+        <h2 style="font-size: 18px; margin-bottom: 20px; color: #0a2d29; border-bottom: 2px solid #f1cd86; padding-bottom: 5px;">Export to Excel</h2>
+        
+        <form action="{{ route('tracker.export_all') }}" method="GET" id="exportForm">
+            <div class="form-group" style="margin-bottom: 20px;">
+                <label for="export_month_id" style="display: block; margin-bottom: 8px; font-weight: 500;">Select Month</label>
+                <select name="month_id" id="export_month_id" required style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                    <option value="">-- Select Month --</option>
+                    @foreach($months as $month)
+                        <option value="{{ $month->id }}">{{ $month->month }}</option>
+                    @endforeach
+                </select>
+            </div>
+            
+            <div style="display: flex; justify-content: flex-end; gap: 10px;">
+                <button type="button" class="btn btn-secondary" onclick="closeExportModal()" style="padding: 8px 16px; font-size: 12px;">Cancel</button>
+                <button type="submit" class="btn btn-primary" style="padding: 8px 16px; font-size: 12px;">Download</button>
+            </div>
+        </form>
+    </div>
 </div>
 
 <style>
@@ -573,6 +605,29 @@
                 tab: currentTab
             };
         }
+
+        // Export Modal Functions
+        window.openExportModal = function() {
+            const modal = document.getElementById('exportModal');
+            // Pre-select the current month filter if set
+            const currentMonthId = document.getElementById('month_id').value;
+            if (currentMonthId) {
+                document.getElementById('export_month_id').value = currentMonthId;
+            }
+            modal.style.display = 'block';
+        }
+
+        window.closeExportModal = function() {
+            document.getElementById('exportModal').style.display = 'none';
+        }
+        
+        // Close modal when clicking outside
+        document.addEventListener('click', function(e) {
+            const modal = document.getElementById('exportModal');
+            if (e.target === modal) {
+                closeExportModal();
+            }
+        });
 
         // Tab switching
         tabs.forEach(tab => {

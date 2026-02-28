@@ -3,40 +3,66 @@
 @section('title', 'Candidates')
 
 @section('content')
-<div class="content-header">
-    <h1>Candidates</h1>
-    <button type="button" class="btn btn-primary" onclick="openModal()">Add</button>
+<div class="content-header" style="margin-bottom: 15px;">
+    <h1 style="font-size: 20px;">Candidates</h1>
+    <button type="button" class="btn btn-primary btn-sm" onclick="openModal()">+ Add Candidate</button>
 </div>
 
 <style>
     .table-container {
-        overflow-x: hidden;
-        overflow-y: hidden;
+        overflow-x: auto;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     }
     .table-container table {
-        font-size: 12px;
+        font-size: 11px;
         width: 100%;
-        table-layout: fixed;
-    }
-    .table-container th,
-    .table-container td {
-        text-align: center;
-        padding: 6px 8px;
-        white-space: normal;
-        word-wrap: break-word;
-        overflow-wrap: break-word;
+        border-collapse: collapse;
     }
     .table-container th {
-        font-size: 11px;
+        background-color: #0a2d29;
+        color: white;
+        padding: 8px 4px;
+        text-align: center;
+        white-space: nowrap;
+        font-size: 10px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
     }
     .table-container td {
-        max-width: 120px;
+        padding: 6px 4px;
+        text-align: center;
+        border-bottom: 1px solid #eee;
+        color: #444;
+        word-break: break-all;
     }
-    body {
-        overflow-x: hidden;
+    .btn-compact {
+        padding: 4px 8px;
+        font-size: 10px;
+        margin: 2px;
     }
-    .content-wrapper {
-        overflow-x: hidden;
+    .action-buttons {
+        display: flex;
+        justify-content: center;
+        gap: 4px;
+    }
+    .resume-link {
+        color: #0a2d29;
+        text-decoration: none;
+        font-weight: 600;
+    }
+    .resume-link:hover {
+        text-decoration: underline;
+    }
+    .job-id-link {
+        color: #f1cd86;
+        background: #0a2d29;
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-size: 10px;
+        margin: 1px;
+        display: inline-block;
     }
 </style>
 
@@ -45,17 +71,17 @@
         <thead>
             <tr>
                 <th>S.No</th>
-                <th>Full Name</th>
+                <th>Name</th>
                 <th>Email</th>
                 <th>Phone</th>
                 <th>Location</th>
                 <th>Work Status</th>
-                <th>Current Company</th>
-                <th>Pay-Rate</th>
-                <th>Agency Name</th>
-                <th>Agency POC</th>
-                <th>Agency POC Phone</th>
-                <th>Job ID</th>
+                <th>Company</th>
+                <th>Rate</th>
+                <th>Agency</th>
+                <th>POC</th>
+                <th>POC Phone</th>
+                <th>Jobs</th>
                 <th>Resume</th>
                 <th>Actions</th>
             </tr>
@@ -75,48 +101,48 @@
                     data-agency-poc-phone="{{ $candidate->agency_poc_phone ?? '' }}">
                     <td>{{ $index + 1 }}</td>
                     <td>{{ $candidate->full_name }}</td>
-                    <td>{{ $candidate->email }}</td>
-                    <td>{{ $candidate->phone ?? 'N/A' }}</td>
+                    <td style="font-size: 10px;">{{ $candidate->email }}</td>
+                    <td>{{ $candidate->phone ?? '-' }}</td>
                     <td>
                         @if($candidate->location)
                             @if($candidate->location->city)
-                                {{ $candidate->location->city }}, {{ $candidate->location->region }}
+                                {{ $candidate->location->city }}
                             @else
                                 {{ $candidate->location->region }}
                             @endif
                         @else
-                            N/A
+                            -
                         @endif
                     </td>
-                    <td>{{ $candidate->work_status ?? 'N/A' }}</td>
-                    <td>{{ $candidate->current_company ?? 'N/A' }}</td>
-                    <td>{{ $candidate->pay_rate ?? 'N/A' }}</td>
-                    <td>{{ $candidate->agency_name ?? 'N/A' }}</td>
-                    <td>{{ $candidate->agency_poc ?? 'N/A' }}</td>
-                    <td>{{ $candidate->agency_poc_phone ?? 'N/A' }}</td>
+                    <td><span style="font-size: 10px; background: #eee; padding: 2px 4px; border-radius: 3px;">{{ $candidate->work_status ?? '-' }}</span></td>
+                    <td>{{ $candidate->current_company ?? '-' }}</td>
+                    <td>{{ $candidate->pay_rate ?? '-' }}</td>
+                    <td>{{ $candidate->agency_name ?? '-' }}</td>
+                    <td>{{ $candidate->agency_poc ?? '-' }}</td>
+                    <td>{{ $candidate->agency_poc_phone ?? '-' }}</td>
                     <td>
                         @if($candidate->trackerCandidates->count() > 0)
                             @foreach($candidate->trackerCandidates as $index => $trackerCandidate)
-                                <a href="{{ route('tracker.info', $trackerCandidate->tracker_info_id) }}" style="color: #f1cd86; text-decoration: none;">#{{ $trackerCandidate->tracker_info_id }}</a>@if($index < $candidate->trackerCandidates->count() - 1), @endif
+                                <a href="{{ route('tracker.info', $trackerCandidate->tracker_info_id) }}" class="job-id-link">#{{ $trackerCandidate->tracker_info_id }}</a>
                             @endforeach
                         @else
-                            N/A
+                            -
                         @endif
                     </td>
                     <td>
                         @if($candidate->resume_file_url)
-                            <a href="{{ $candidate->resume_file_url }}" target="_blank" style="color: #f1cd86;">View Resume</a>
+                            <a href="{{ $candidate->resume_file_url }}" target="_blank" class="resume-link">View</a>
                         @else
-                            N/A
+                            -
                         @endif
                     </td>
                     <td>
                         <div class="action-buttons">
-                            <a href="{{ route('candidates.edit', $candidate->id) }}" class="btn btn-secondary btn-sm" title="Edit">Edit</a>
+                            <a href="{{ route('candidates.edit', $candidate->id) }}" class="btn btn-secondary btn-compact" title="Edit">Edit</a>
                             <form method="POST" action="{{ route('candidates.destroy', $candidate->id) }}" style="display: inline;" onsubmit="return confirm('Are you sure you want to delete this candidate?');">
                                 @csrf
                                 @method('DELETE')
-                                <button type="submit" class="btn btn-danger btn-sm" title="Delete">Delete</button>
+                                <button type="submit" class="btn btn-danger btn-compact" title="Delete">Del</button>
                             </form>
                         </div>
                     </td>
@@ -140,115 +166,86 @@
         <form id="candidateForm" method="POST" action="{{ route('candidates.store') }}" enctype="multipart/form-data">
             @csrf
             
-            <div class="form-group">
-                <label for="full_name">Candidate Full Name *</label>
-                <input type="text" id="full_name" name="full_name" value="{{ old('full_name') }}" required style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
-                @error('full_name')
-                    <div style="color: #dc3545; margin-top: 5px; font-size: 14px;">{{ $message }}</div>
-                @enderror
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                <div class="form-group">
+                    <label for="full_name" style="font-size: 11px;">Candidate Full Name *</label>
+                    <input type="text" id="full_name" name="full_name" value="{{ old('full_name') }}" required style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 12px;">
+                    @error('full_name')
+                        <div style="color: #dc3545; margin-top: 2px; font-size: 11px;">{{ $message }}</div>
+                    @enderror
+                </div>
+
+                <div class="form-group">
+                    <label for="email" style="font-size: 11px;">Candidate Email Id *</label>
+                    <input type="email" id="email" name="email" value="{{ old('email') }}" required style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 12px;">
+                    @error('email')
+                        <div style="color: #dc3545; margin-top: 2px; font-size: 11px;">{{ $message }}</div>
+                    @enderror
+                </div>
+
+                <div class="form-group">
+                    <label for="phone" style="font-size: 11px;">Candidate Phone</label>
+                    <input type="text" id="phone" name="phone" value="{{ old('phone') }}" style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 12px;">
+                </div>
+
+                <div class="form-group">
+                    <label for="location_id" style="font-size: 11px;">Location</label>
+                    <select id="location_id" name="location_id" style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 12px;">
+                        <option value="">Select Location</option>
+                        @foreach(\App\Models\Region::orderBy('region', 'asc')->get() as $region)
+                            <option value="{{ $region->id }}" {{ old('location_id') == $region->id ? 'selected' : '' }}>
+                                {{ $region->city ? $region->city . ', ' : '' }}{{ $region->region }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="work_status" style="font-size: 11px;">Work Status</label>
+                    <select id="work_status" name="work_status" style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 12px;">
+                        <option value="">Select Work Status</option>
+                        <option value="GC">GC</option>
+                        <option value="PR">PR</option>
+                        <option value="Citizen">Citizen</option>
+                        <option value="H1B">H1B</option>
+                        <option value="OPT">OPT</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="current_company" style="font-size: 11px;">Current Company</label>
+                    <input type="text" id="current_company" name="current_company" style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 12px;">
+                </div>
+
+                <div class="form-group">
+                    <label for="pay_rate" style="font-size: 11px;">Pay-Rate</label>
+                    <input type="text" id="pay_rate" name="pay_rate" placeholder="e.g., $50/hr" style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 12px;">
+                </div>
+
+                <div class="form-group">
+                    <label for="agency_name" style="font-size: 11px;">Agency Name</label>
+                    <input type="text" id="agency_name" name="agency_name" style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 12px;">
+                </div>
+
+                <div class="form-group">
+                    <label for="agency_poc" style="font-size: 11px;">Agency POC</label>
+                    <input type="text" id="agency_poc" name="agency_poc" style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 12px;">
+                </div>
+
+                <div class="form-group">
+                    <label for="agency_poc_phone" style="font-size: 11px;">Agency POC Phone</label>
+                    <input type="text" id="agency_poc_phone" name="agency_poc_phone" style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 12px;">
+                </div>
+
+                <div class="form-group" style="grid-column: span 2;">
+                    <label for="resume_file" style="font-size: 11px;">Resume (PDF/JPG/PNG)</label>
+                    <input type="file" id="resume_file" name="resume_file" style="width: 100%; font-size: 11px;">
+                </div>
             </div>
 
-            <div class="form-group">
-                <label for="email">Candidate Email Id *</label>
-                <input type="email" id="email" name="email" value="{{ old('email') }}" required style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
-                @error('email')
-                    <div style="color: #dc3545; margin-top: 5px; font-size: 14px;">{{ $message }}</div>
-                @enderror
-            </div>
-
-            <div class="form-group">
-                <label for="phone">Candidate Phone</label>
-                <input type="text" id="phone" name="phone" value="{{ old('phone') }}" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
-                @error('phone')
-                    <div style="color: #dc3545; margin-top: 5px; font-size: 14px;">{{ $message }}</div>
-                @enderror
-            </div>
-
-            <div class="form-group">
-                <label for="location_id">Candidate Location (City, State)</label>
-                <select id="location_id" name="location_id" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
-                    <option value="">Select Location</option>
-                    @foreach(\App\Models\Region::orderBy('region', 'asc')->get() as $region)
-                        <option value="{{ $region->id }}" {{ old('location_id') == $region->id ? 'selected' : '' }}>
-                            @if($region->city)
-                                {{ $region->city }}, {{ $region->region }}
-                            @else
-                                {{ $region->region }}
-                            @endif
-                        </option>
-                    @endforeach
-                </select>
-                @error('location_id')
-                    <div style="color: #dc3545; margin-top: 5px; font-size: 14px;">{{ $message }}</div>
-                @enderror
-            </div>
-
-            <div class="form-group">
-                <label for="work_status">Candidate Work Status</label>
-                <select id="work_status" name="work_status" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
-                    <option value="">Select Work Status</option>
-                    <option value="GC" {{ old('work_status') == 'GC' ? 'selected' : '' }}>GC</option>
-                    <option value="PR" {{ old('work_status') == 'PR' ? 'selected' : '' }}>PR</option>
-                    <option value="Citizen" {{ old('work_status') == 'Citizen' ? 'selected' : '' }}>Citizen</option>
-                    <option value="H1B" {{ old('work_status') == 'H1B' ? 'selected' : '' }}>H1B</option>
-                    <option value="OPT" {{ old('work_status') == 'OPT' ? 'selected' : '' }}>OPT</option>
-                </select>
-                @error('work_status')
-                    <div style="color: #dc3545; margin-top: 5px; font-size: 14px;">{{ $message }}</div>
-                @enderror
-            </div>
-
-            <div class="form-group">
-                <label for="current_company">Current Company</label>
-                <input type="text" id="current_company" name="current_company" value="{{ old('current_company') }}" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
-                @error('current_company')
-                    <div style="color: #dc3545; margin-top: 5px; font-size: 14px;">{{ $message }}</div>
-                @enderror
-            </div>
-
-            <div class="form-group">
-                <label for="pay_rate">Candidate Pay-Rate</label>
-                <input type="text" id="pay_rate" name="pay_rate" value="{{ old('pay_rate') }}" placeholder="e.g., $50/hr or $100k/year" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
-                @error('pay_rate')
-                    <div style="color: #dc3545; margin-top: 5px; font-size: 14px;">{{ $message }}</div>
-                @enderror
-            </div>
-
-            <div class="form-group">
-                <label for="agency_name">Candidate Agency Name</label>
-                <input type="text" id="agency_name" name="agency_name" value="{{ old('agency_name') }}" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
-                @error('agency_name')
-                    <div style="color: #dc3545; margin-top: 5px; font-size: 14px;">{{ $message }}</div>
-                @enderror
-            </div>
-
-            <div class="form-group">
-                <label for="agency_poc">Candidate Agency POC (Point-of-Contact)</label>
-                <input type="text" id="agency_poc" name="agency_poc" value="{{ old('agency_poc') }}" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
-                @error('agency_poc')
-                    <div style="color: #dc3545; margin-top: 5px; font-size: 14px;">{{ $message }}</div>
-                @enderror
-            </div>
-
-            <div class="form-group">
-                <label for="agency_poc_phone">Candidate Agency POC Phone Number</label>
-                <input type="text" id="agency_poc_phone" name="agency_poc_phone" value="{{ old('agency_poc_phone') }}" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
-                @error('agency_poc_phone')
-                    <div style="color: #dc3545; margin-top: 5px; font-size: 14px;">{{ $message }}</div>
-                @enderror
-            </div>
-
-            <div class="form-group">
-                <label for="resume_file">Resume Link / File Name (PDF, JPG, PNG)</label>
-                <input type="file" id="resume_file" name="resume_file" accept=".pdf,.jpg,.jpeg,.png" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
-                @error('resume_file')
-                    <div style="color: #dc3545; margin-top: 5px; font-size: 14px;">{{ $message }}</div>
-                @enderror
-            </div>
-
-            <div class="form-group">
-                <button type="submit" class="btn btn-primary">Add</button>
-                <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+            <div style="margin-top: 10px; display: flex; justify-content: flex-end; gap: 10px;">
+                <button type="submit" class="btn btn-primary btn-sm">Save Candidate</button>
+                <button type="button" class="btn btn-secondary btn-sm" onclick="closeModal()">Cancel</button>
             </div>
         </form>
     </div>

@@ -8,6 +8,7 @@ use App\Http\Controllers\StaffUserController;
 use App\Http\Controllers\ClientController;
 use App\Http\Controllers\RegionController;
 use App\Http\Controllers\CandidateController;
+use App\Http\Controllers\ResumeAnalysisController;
 
 Route::get('/', function () {
     if (auth()->check()) {
@@ -22,6 +23,9 @@ Route::post('/logout', [LoginController::class, 'logout'])->name('logout')->midd
 
 Route::middleware('auth')->group(function () {
     Route::get('/tracker/info', [TrackerController::class, 'index'])->name('tracker.index');
+    Route::get('/tracker/export', [TrackerController::class, 'exportAll'])->name('tracker.export_all');
+    Route::get('/tracker/import', [TrackerController::class, 'showImportForm'])->name('tracker.import');
+    Route::post('/tracker/import', [TrackerController::class, 'importExcel'])->name('tracker.import.process');
     Route::get('/create/demand', [TrackerController::class, 'create'])->name('tracker.create');
     Route::post('/tracker/info', [TrackerController::class, 'store'])->name('tracker.store');
     Route::get('/tracker/info/{id}/edit', [TrackerController::class, 'edit'])->name('tracker.edit');
@@ -29,6 +33,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/tracker/info/{id}', [TrackerController::class, 'info'])->name('tracker.info');
     Route::put('/tracker/info/{id}', [TrackerController::class, 'update'])->name('tracker.update');
     Route::delete('/tracker/info/{id}', [TrackerController::class, 'destroy'])->name('tracker.destroy');
+    Route::get('/tracker/info/{id}/export', [TrackerController::class, 'export'])->name('tracker.export');
     
     // Candidate assignment and pipeline routes
     Route::post('/tracker/info/{id}/candidates', [TrackerController::class, 'assignCandidate'])->name('tracker.candidates.assign');
@@ -56,4 +61,7 @@ Route::middleware('auth')->group(function () {
     
     Route::resource('months', MonthController::class);
     Route::resource('users', StaffUserController::class);
+
+    Route::get('/resume-analysis', [ResumeAnalysisController::class, 'index'])->name('resume.analysis.index');
+    Route::post('/resume-analysis', [ResumeAnalysisController::class, 'analyze'])->name('resume.analysis.analyze');
 });

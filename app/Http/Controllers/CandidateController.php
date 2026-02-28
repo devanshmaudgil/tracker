@@ -62,12 +62,20 @@ class CandidateController extends Controller
                 $trackerCandidate = TrackerCandidate::create([
                     'tracker_info_id' => $trackerId,
                     'candidate_id' => $candidate->id,
+                    'current_status_id' => 2, // Candidate Identified
                 ]);
 
                 // Create initial pipeline status record
                 CandidatePipelineStatus::create([
                     'tracker_candidate_id' => $trackerCandidate->id,
+                    'candidate_identified' => true,
                 ]);
+
+                // Update overall job status based on majority
+                $trackerInfo = \App\Models\TrackerInfo::find($trackerId);
+                if ($trackerInfo) {
+                    $trackerInfo->updateStatusFromCandidates();
+                }
             }
 
             return redirect()->route('tracker.info', $trackerId)->with('success', 'Candidate created and assigned to job successfully.');

@@ -5,6 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>@yield('title', 'Staffing Tracker')</title>
     <link rel="icon" type="image/webp" href="{{ asset('favicon.webp') }}">
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -99,6 +102,46 @@
         }
         .sidebar.collapsed .sidebar-menu a {
             justify-content: center;
+        }
+
+        /* Dropdown Styles */
+        .sidebar-menu .dropdown-wrapper {
+            position: relative;
+        }
+        .sidebar-menu .dropdown-btn {
+            cursor: pointer;
+            justify-content: space-between !important;
+        }
+        .sidebar-menu .submenu {
+            list-style: none;
+            padding: 0;
+            max-height: 0;
+            overflow: hidden;
+            opacity: 0;
+            background-color: rgba(0, 0, 0, 0.2);
+            transition: max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease;
+        }
+        .sidebar-menu .submenu.active {
+            max-height: 400px; /* Enough for the sub-items */
+            opacity: 1;
+        }
+        .sidebar-menu .submenu li {
+            margin: 0;
+        }
+        .sidebar-menu .submenu a {
+            padding: 10px 20px 10px 40px;
+            font-size: 13px;
+        }
+        .sidebar.collapsed .sidebar-menu .submenu {
+            max-height: 0 !important;
+            opacity: 0 !important;
+        }
+        .dropdown-chevron {
+            font-size: 10px;
+            transition: transform 0.3s ease;
+        }
+        .dropdown-btn.active .dropdown-chevron {
+            transform: rotate(180deg);
         }
         .main-content {
             margin-left: 250px;
@@ -263,29 +306,43 @@
                     </a>
                 </li>
                 <li>
-                    <a href="{{ route('months.index') }}" class="{{ request()->routeIs('months.*') ? 'active' : '' }}">
-                        <span>Months</span>
+                    <a href="{{ route('resume.analysis.index') }}" class="{{ request()->routeIs('resume.*') ? 'active' : '' }}">
+                        <span>Resume Analysis</span>
                     </a>
                 </li>
-                <li>
-                    <a href="{{ route('users.index') }}" class="{{ request()->routeIs('users.*') ? 'active' : '' }}">
-                        <span>Users</span>
+                
+                <li class="dropdown-wrapper">
+                    <a href="javascript:void(0)" class="dropdown-btn {{ (request()->routeIs('months.*') || request()->routeIs('users.*') || request()->routeIs('clients.*') || request()->routeIs('regions.*') || request()->routeIs('candidates.*')) ? 'active' : '' }}" onclick="toggleDropdown(this)">
+                        <span>Register</span>
+                        <span class="dropdown-chevron">▼</span>
                     </a>
-                </li>
-                <li>
-                    <a href="{{ route('clients.info') }}" class="{{ request()->routeIs('clients.*') ? 'active' : '' }}">
-                        <span>Clients</span>
-                    </a>
-                </li>
-                <li>
-                    <a href="{{ route('regions.index') }}" class="{{ request()->routeIs('regions.*') ? 'active' : '' }}">
-                        <span>Region</span>
-                    </a>
-                </li>
-                <li>
-                    <a href="{{ route('candidates.index') }}" class="{{ request()->routeIs('candidates.*') ? 'active' : '' }}">
-                        <span>Candidates</span>
-                    </a>
+                    <ul class="submenu {{ (request()->routeIs('months.*') || request()->routeIs('users.*') || request()->routeIs('clients.*') || request()->routeIs('regions.*') || request()->routeIs('candidates.*')) ? 'active' : '' }}">
+                        <li>
+                            <a href="{{ route('months.index') }}" class="{{ request()->routeIs('months.*') ? 'active' : '' }}">
+                                <span>Months</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="{{ route('users.index') }}" class="{{ request()->routeIs('users.*') ? 'active' : '' }}">
+                                <span>Users</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="{{ route('clients.info') }}" class="{{ request()->routeIs('clients.*') ? 'active' : '' }}">
+                                <span>Clients</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="{{ route('regions.index') }}" class="{{ request()->routeIs('regions.*') ? 'active' : '' }}">
+                                <span>Region</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="{{ route('candidates.index') }}" class="{{ request()->routeIs('candidates.*') ? 'active' : '' }}">
+                                <span>Candidates</span>
+                            </a>
+                        </li>
+                    </ul>
                 </li>
 
                 <li>
@@ -305,6 +362,11 @@
                     {{ session('success') }}
                 </div>
             @endif
+            @if(session('error'))
+                <div class="alert alert-danger" style="background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb;">
+                    {{ session('error') }}
+                </div>
+            @endif
 
             @yield('content')
         </div>
@@ -315,6 +377,18 @@
             const sidebar = document.getElementById('sidebar');
             sidebar.classList.toggle('collapsed');
             localStorage.setItem('sidebarCollapsed', sidebar.classList.contains('collapsed'));
+        }
+
+        function toggleDropdown(btn) {
+            const sidebar = document.getElementById('sidebar');
+            if (sidebar.classList.contains('collapsed')) {
+                sidebar.classList.remove('collapsed');
+                localStorage.setItem('sidebarCollapsed', 'false');
+            }
+            
+            const submenu = btn.nextElementSibling;
+            submenu.classList.toggle('active');
+            btn.classList.toggle('active');
         }
 
         // Restore sidebar state on page load

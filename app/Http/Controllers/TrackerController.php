@@ -11,6 +11,8 @@ use App\Models\TrackerCandidate;
 use App\Models\CandidatePipelineStatus;
 use App\Models\Candidate;
 use Illuminate\Http\Request;
+use App\Exports\TrackerExport;
+use App\Imports\TrackerImport;
 
 class TrackerController extends Controller
 {
@@ -259,6 +261,108 @@ class TrackerController extends Controller
         return redirect()->route('tracker.index')->with('success', 'Tracker info deleted successfully.');
     }
 
+    public function export(string $id)
+    {
+        $exporter = new TrackerExport($id);
+        return $exporter->export();
+    }
+
+    public function exportAll(Request $request)
+    {
+        $query = TrackerInfo::query();
+        
+        // Apply exactly the same filters as in index()
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function($q) use ($search) {
+                $q->where('id', 'like', "%{$search}%")
+                  ->orWhere('position', 'like', "%{$search}%")
+                  ->orWhere('type_of_job', 'like', "%{$search}%")
+                  ->orWhere('bill_rate_salary_range', 'like', "%{$search}%")
+                  ->orWhere('priority', 'like', "%{$search}%")
+                  ->orWhere('cf', 'like', "%{$search}%")
+                  ->orWhere('csi', 'like', "%{$search}%")
+                  ->orWhereHas('month', function($q) use ($search) {
+                      $q->where('month', 'like', "%{$search}%");
+                  })
+                  ->orWhereHas('client', function($q) use ($search) {
+                      $q->where('client', 'like', "%{$search}%");
+                  });
+            });
+        }
+        
+        if ($request->filled('month_id')) {
+            $query->where('month_id', $request->month_id);
+        }
+        
+        if ($request->filled('client_id')) {
+            $query->where('client_id', $request->client_id);
+        }
+        
+        if ($request->filled('lead_recruiter_id')) {
+            $query->where('lr', $request->lead_recruiter_id);
+        }
+
+        $tab = $request->get('tab');
+        if ($tab) {
+            switch ($tab) {
+                case 'demand_raised': $query->where('job_status_FK', 1); break;
+                case 'identified': $query->where('job_status_FK', 2); break;
+                case 'screening': $query->whereIn('job_status_FK', [3, 4, 5]); break;
+                case 'submission': $query->whereIn('job_status_FK', [6, 7, 8]); break;
+                case 'interview': $query->whereIn('job_status_FK', [9, 10, 11]); break;
+                case 'decision': $query->where('job_status_FK', 12); break;
+                case 'accepted': $query->where('job_status_FK', 17); break;
+                case 'rejected': $query->where('job_status_FK', 18); break;
+            }
+        }
+
+        $trackerIds = $query->pluck('id')->toArray();
+        
+        if (empty($trackerIds)) {
+            return back()->with('error', 'No data found to export.');
+        }
+
+        $exporter = new TrackerExport($trackerIds);
+        return $exporter->export();
+    }
+
+    public function showImportForm()
+    {
+        return view('tracker.import');
+    }
+
+    public function importExcel(Request $request)
+    {
+        $request->validate([
+            'excel_file' => 'required|file|mimes:xlsx,xls|max:10240', // Max 10MB
+        ]);
+
+        try {
+            $file = $request->file('excel_file');
+            $filePath = $file->getRealPath();
+
+            $importer = new TrackerImport();
+            $result = $importer->import($filePath);
+
+            if ($result['success']) {
+                $message = "Import completed! Imported: {$result['imported']}, Skipped: {$result['skipped']}";
+                
+                if (!empty($result['errors'])) {
+                    $message .= " | Errors: " . count($result['errors']);
+                    session()->flash('import_errors', $result['errors']);
+                }
+
+                return redirect()->route('tracker.index')->with('success', $message);
+            } else {
+                return back()->with('error', 'Import failed: ' . $result['message']);
+            }
+
+        } catch (\Exception $e) {
+            return back()->with('error', 'Import failed: ' . $e->getMessage());
+        }
+    }
+
     public function assignCandidate(Request $request, string $id)
     {
         $request->validate([
@@ -431,8 +535,22 @@ class TrackerController extends Controller
             $request->merge(['current_status_id' => 11]); // Move to Additional Rounds
         } elseif ($currentStatusId == 10 && $request->additional_rounds_select == 'No') {
             $request->merge(['current_status_id' => 12]); // Move to Client Decision
+        } elseif ($currentStatusId == 11 && $request->additional_rounds_select == 'No') {
+            $request->merge(['current_status_id' => 12]); // Move to Client Decision
         } elseif ($currentStatusId == 12 && $request->client_decision == 'Selected') {
             $request->merge(['current_status_id' => 13]); // Move to Client Confirmation
+        } elseif ($currentStatusId == 13 && $request->has('client_confirmation_received')) {
+            $request->merge(['current_status_id' => 14]); // Move to Offer Extended
+        } elseif ($currentStatusId == 14 && $request->has('offer_extended_to_candidate')) {
+            $request->merge(['current_status_id' => 15]); // Move to Background Check
+        } elseif ($currentStatusId == 15 && $request->background_check == 'Completed') {
+            $request->merge(['current_status_id' => 16]); // Move to Project Start
+        } elseif ($currentStatusId == 16 && $request->filled('candidate_project_start_date')) {
+            $request->merge(['current_status_id' => 17]); // Move to Placement Completion (Confirmed)
+        } elseif ($currentStatusId == 17 && $request->final_status_placement_completion == 'Rejected') {
+            $request->merge(['current_status_id' => 18]); // Move to Placement Rejected
+        } elseif ($currentStatusId == 17 && $request->final_status_placement_completion == 'Confirmed') {
+            $request->merge(['current_status_id' => 17]); // Stay at Confirmed
         } elseif ($currentStatusId == 12 && $request->client_decision == 'Rejected') {
             // Automatically remove candidate from job
             if ($trackerCandidate->pipelineStatus) {
@@ -470,6 +588,8 @@ class TrackerController extends Controller
         // Convert checkboxes/logic
         $data['candidate_identified'] = $request->has('candidate_identified') || $currentStatusId >= 2;
         $data['candidate_shortlisted'] = $request->has('candidate_shortlisted') || $currentStatusId >= 5;
+        $data['client_confirmation_received'] = $request->has('client_confirmation_received') || $currentStatusId >= 14;
+        $data['offer_extended_to_candidate'] = $request->has('offer_extended_to_candidate') || $currentStatusId >= 15;
         
         // Handle additional_rounds from select if present
         if ($request->has('additional_rounds_select')) {
