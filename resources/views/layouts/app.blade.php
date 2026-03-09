@@ -310,7 +310,12 @@
                         <span>Resume Analysis</span>
                     </a>
                 </li>
-                
+                <li>
+                    <a href="{{ route('candidates.search.index') }}" class="{{ request()->routeIs('candidates.search.*') ? 'active' : '' }}">
+                        <span>Find Candidates</span>
+                    </a>
+                </li>
+
                 <li class="dropdown-wrapper">
                     <a href="javascript:void(0)" class="dropdown-btn {{ (request()->routeIs('months.*') || request()->routeIs('users.*') || request()->routeIs('clients.*') || request()->routeIs('regions.*') || request()->routeIs('candidates.*')) ? 'active' : '' }}" onclick="toggleDropdown(this)">
                         <span>Register</span>

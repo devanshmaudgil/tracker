@@ -64,7 +64,7 @@ class ResumeAnalysisController extends Controller
                 . "- Do not use markdown syntax anywhere.\n"
                 . "- Keep the language concise and recruiter-friendly.\n";
 
-            $analysisResponse = Http::timeout(30)->post($endpoint, [
+            $analysisResponse = Http::timeout(60)->post($endpoint, [
                 'contents' => [
                     [
                         'parts' => [
@@ -106,7 +106,7 @@ class ResumeAnalysisController extends Controller
                 . "3. Question: ... and so on up to 10.\n\n"
                 . "Do not add any headings or extra commentary before or after the list.";
 
-            $qaResponse = Http::timeout(30)->post($endpoint, [
+            $qaResponse = Http::timeout(60)->post($endpoint, [
                 'contents' => [
                     [
                         'parts' => [

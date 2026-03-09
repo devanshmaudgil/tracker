@@ -9,6 +9,7 @@ use App\Http\Controllers\ClientController;
 use App\Http\Controllers\RegionController;
 use App\Http\Controllers\CandidateController;
 use App\Http\Controllers\ResumeAnalysisController;
+use App\Http\Controllers\CandidateSearchController;
 
 Route::get('/', function () {
     if (auth()->check()) {
@@ -64,4 +65,7 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/resume-analysis', [ResumeAnalysisController::class, 'index'])->name('resume.analysis.index');
     Route::post('/resume-analysis', [ResumeAnalysisController::class, 'analyze'])->name('resume.analysis.analyze');
+
+    Route::get('/candidate-search', [CandidateSearchController::class, 'index'])->name('candidates.search.index');
+    Route::post('/candidate-search', [CandidateSearchController::class, 'search'])->name('candidates.search.submit');
 });
