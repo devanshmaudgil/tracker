@@ -11,11 +11,17 @@ class CandidatePipelineStatus extends Model
     protected $fillable = [
         'tracker_candidate_id',
         'candidate_identified',
+        'requirement_reviewed',
         'resume_reviewed_by_recruiter',
         'resume_reviewed_date',
         'recruiter_screening_call',
         'recruiter_screening_call_date',
         'candidate_shortlisted',
+        'doc_resume_collected',
+        'doc_govt_id_collected',
+        'doc_work_auth_collected',
+        'doc_linkedin_collected',
+        'rtr_signed',
         'resume_submitted_to_client',
         'radix_internal_interview_prep',
         'radix_internal_interview_prep_date',
@@ -33,15 +39,22 @@ class CandidatePipelineStatus extends Model
         'candidate_project_start_date',
         'final_status_placement_completion',
         'placement_completion_date',
+        'interview_transcript',
     ];
 
     protected function casts(): array
     {
         return [
             'candidate_identified' => 'boolean',
+            'requirement_reviewed' => 'boolean',
+            'doc_govt_id_collected' => 'boolean',
+            'doc_work_auth_collected' => 'boolean',
+            'doc_linkedin_collected' => 'boolean',
+            'rtr_signed' => 'boolean',
             'resume_reviewed_date' => 'date',
             'recruiter_screening_call_date' => 'date',
             'candidate_shortlisted' => 'boolean',
+            'doc_resume_collected' => 'boolean',
             'radix_internal_interview_prep_date' => 'date',
             'client_interview_round_1_date' => 'date',
             'client_interview_round_2_date' => 'date',

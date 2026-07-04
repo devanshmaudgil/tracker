@@ -82,9 +82,41 @@
         font-size: 11px;
         padding: 2px 8px;
         border-radius: 4px;
-        background: rgba(241, 205, 134, 0.2);
-        color: #0a2d29;
+        color: #fff;
         margin-top: 6px;
+        font-weight: 600;
+    }
+    .result-source.source-linkedin { background: #0077b5; }
+    .result-source.source-indeed { background: #2164f3; }
+    .result-source.source-naukri { background: #4a90d9; }
+    .platform-check {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 13px;
+        cursor: pointer;
+        padding: 6px 12px;
+        border: 1px solid #ddd;
+        border-radius: 6px;
+        transition: all 0.15s;
+        user-select: none;
+    }
+    .platform-check:has(input:checked) {
+        border-color: #0a2d29;
+        background: rgba(10, 45, 41, 0.06);
+    }
+    .platform-check input { display: none; }
+    .platform-icon {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 20px;
+        height: 20px;
+        border-radius: 4px;
+        color: #fff;
+        font-size: 10px;
+        font-weight: 700;
+        line-height: 1;
     }
     .keywords-used {
         font-size: 13px;
@@ -133,6 +165,7 @@
 
 @php
     $jdValue = old('job_description', $jobDescription ?? '');
+    $selectedPlatforms = old('platforms', $selectedPlatforms ?? ['linkedin']);
 @endphp
 
 <div class="search-layout">
@@ -140,7 +173,7 @@
         <div class="search-card">
             <h2>Paste Job Description</h2>
             <p class="search-meta">
-                Paste a job description below. We'll use AI to extract the role and key skills, then search LinkedIn for relevant candidate profiles.
+                Paste a job description below. We'll use AI to extract the role and key skills, then search selected platforms for relevant candidate profiles.
             </p>
 
             @if ($errors->any())
@@ -168,15 +201,44 @@
                         Include job title, required skills, technologies, and experience level for better search results.
                     </div>
                 </div>
-                @isset($booleanQuery)
+
+                <div class="form-group" style="margin-top: 14px;">
+                    <label>Search Platforms</label>
+                    <div style="display: flex; gap: 18px; margin-top: 6px; flex-wrap: wrap;">
+                        <label class="platform-check">
+                            <input type="checkbox" name="platforms[]" value="linkedin" {{ in_array('linkedin', $selectedPlatforms) ? 'checked' : '' }}>
+                            <span class="platform-icon" style="background: #0077b5;">in</span>
+                            LinkedIn
+                        </label>
+                        <label class="platform-check">
+                            <input type="checkbox" name="platforms[]" value="indeed" {{ in_array('indeed', $selectedPlatforms) ? 'checked' : '' }}>
+                            <span class="platform-icon" style="background: #2164f3;">iD</span>
+                            Indeed
+                        </label>
+                        <label class="platform-check">
+                            <input type="checkbox" name="platforms[]" value="naukri" {{ in_array('naukri', $selectedPlatforms) ? 'checked' : '' }}>
+                            <span class="platform-icon" style="background: #4a90d9;">N</span>
+                            Naukri
+                        </label>
+                    </div>
+                    <div class="hint-text">Select one or more platforms to search. Each uses a separate SerpAPI call.</div>
+                </div>
+
+                @if (!empty($booleanQueries))
                     <div class="form-group" style="margin-top: 12px;">
-                        <label for="boolean_search">LinkedIn Boolean Search</label>
-                        <textarea id="boolean_search" rows="3" readonly onclick="this.select()">{{ $booleanQuery }}</textarea>
+                        <label>Boolean Search Queries</label>
+                        @foreach ($booleanQueries as $platformLabel => $bq)
+                            <div style="margin-bottom: 8px;">
+                                <span style="font-size: 12px; font-weight: 600; color: #0a2d29;">{{ $platformLabel }}</span>
+                                <textarea rows="2" readonly onclick="this.select()" style="margin-top: 2px;">{{ $bq }}</textarea>
+                            </div>
+                        @endforeach
                         <div class="hint-text">
-                            Copy this and paste it into Google or Bing to run the LinkedIn search manually.
+                            Copy any of these and paste into Google or Bing to run the search manually.
                         </div>
                     </div>
-                @endisset
+                @endif
+
                 <button type="submit" class="btn btn-primary">
                     Find Candidates
                 </button>
@@ -197,7 +259,7 @@
                     </p>
                 @endif
                 <p style="font-size: 13px; color: #666; margin-bottom: 16px;">
-                    Open links in new tabs to view LinkedIn profiles. You can reach out to candidates directly from their profiles.
+                    Open links in new tabs to view candidate profiles. You can reach out to candidates directly from their profiles.
                 </p>
                 <div id="resultsContainer">
                     @foreach ($results as $result)
@@ -215,7 +277,7 @@
                                 <div class="result-snippet">{{ $result['snippet'] }}</div>
                             @endif
                             @if (!empty($result['source']))
-                                <span class="result-source">{{ $result['source'] }}</span>
+                                <span class="result-source source-{{ strtolower($result['source']) }}">{{ $result['source'] }}</span>
                             @endif
                         </div>
                     @endforeach
@@ -286,10 +348,10 @@
             <div class="search-card">
                 <h2>Results</h2>
                 <p class="search-meta">
-                    Paste a job description and click <strong>Find Candidates</strong> to search LinkedIn for matching profiles.
+                    Paste a job description and click <strong>Find Candidates</strong> to search for matching profiles.
                 </p>
                 <p style="font-size: 13px; color: #555;">
-                    Results will appear here as links to LinkedIn profiles. You can open each link to review the candidate and reach out.
+                    Results will appear here as links to candidate profiles on LinkedIn, Indeed, and Naukri. You can open each link to review the candidate and reach out.
                 </p>
             </div>
         @endif

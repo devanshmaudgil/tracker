@@ -20,6 +20,7 @@ class DatabaseSeeder extends Seeder
             ClientSeeder::class,
             RegionSeeder::class,
             JobStatusSeeder::class,
+            TrackerSeeder::class,
         ]);
     }
 }

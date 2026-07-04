@@ -11,9 +11,9 @@ class LoginController extends Controller
 {
     public function showLoginForm()
     {
-        // If user is already authenticated, redirect to dashboard
+        // If user is already authenticated, redirect to recruiterment workspace
         if (Auth::check()) {
-            return redirect()->route('tracker.index');
+            return redirect()->route('welcome');
         }
         
         return view('auth.login');
@@ -30,7 +30,7 @@ class LoginController extends Controller
 
         if (Auth::attempt($credentials, $remember)) {
             $request->session()->regenerate();
-            return redirect()->intended('/tracker/info');
+            return redirect()->intended(route('welcome'));
         }
 
         return back()->withErrors([

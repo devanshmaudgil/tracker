@@ -10,10 +10,13 @@ use App\Http\Controllers\RegionController;
 use App\Http\Controllers\CandidateController;
 use App\Http\Controllers\ResumeAnalysisController;
 use App\Http\Controllers\CandidateSearchController;
+use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\CalendarController;
+use App\Http\Controllers\WelcomeController;
 
 Route::get('/', function () {
     if (auth()->check()) {
-        return redirect()->route('tracker.index');
+        return redirect()->route(session('welcome_seen') ? 'tracker.index' : 'welcome');
     }
     return redirect()->route('login');
 });
@@ -23,6 +26,16 @@ Route::post('/login', [LoginController::class, 'login'])->middleware('guest');
 Route::post('/logout', [LoginController::class, 'logout'])->name('logout')->middleware('auth');
 
 Route::middleware('auth')->group(function () {
+    Route::get('/welcome', [WelcomeController::class, 'show'])->name('welcome');
+    Route::post('/welcome/continue', [WelcomeController::class, 'continue'])->name('welcome.continue');
+    Route::view('/guide', 'guide.index')->name('guide.index');
+
+    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard.index');
+    Route::get('/dashboard/data', [DashboardController::class, 'data'])->name('dashboard.data');
+    Route::get('/dashboard/kpi/{kpi}', [DashboardController::class, 'kpiDetail'])->name('dashboard.kpi');
+    Route::get('/dashboard/export', [DashboardController::class, 'export'])->name('dashboard.export');
+    Route::get('/calendar/holidays', [CalendarController::class, 'holidays'])->name('calendar.holidays');
+
     Route::get('/tracker/info', [TrackerController::class, 'index'])->name('tracker.index');
     Route::get('/tracker/export', [TrackerController::class, 'exportAll'])->name('tracker.export_all');
     Route::get('/tracker/import', [TrackerController::class, 'showImportForm'])->name('tracker.import');
@@ -41,6 +54,14 @@ Route::middleware('auth')->group(function () {
     Route::delete('/tracker/info/{tracker_id}/candidates/{tracker_candidate_id}', [TrackerController::class, 'unassignCandidate'])->name('tracker.candidates.unassign');
     Route::get('/tracker/info/{tracker_id}/candidates/{tracker_candidate_id}/pipeline', [TrackerController::class, 'getPipelineStatus'])->name('tracker.candidates.pipeline.get');
     Route::put('/tracker/info/{tracker_id}/candidates/{tracker_candidate_id}/pipeline', [TrackerController::class, 'updatePipelineStatus'])->name('tracker.candidates.pipeline.update');
+    Route::post('/tracker/info/{tracker_id}/candidates/{tracker_candidate_id}/checklist', [TrackerController::class, 'updateChecklist'])->name('tracker.candidates.checklist.update');
+    Route::post('/tracker/info/{tracker_id}/candidates/{tracker_candidate_id}/reject', [TrackerController::class, 'rejectCandidate'])->name('tracker.candidates.reject');
+    Route::post('/tracker/info/{tracker_id}/candidates/{tracker_candidate_id}/revert', [TrackerController::class, 'revertCandidate'])->name('tracker.candidates.revert');
+    Route::post('/tracker/info/{tracker_id}/candidates/{tracker_candidate_id}/approve', [TrackerController::class, 'markApproved'])->name('tracker.candidates.approve');
+    Route::post('/tracker/info/{tracker_id}/candidates/{tracker_candidate_id}/approved-stage', [TrackerController::class, 'updateApprovedStage'])->name('tracker.candidates.approved-stage');
+    Route::get('/tracker/info/{tracker_id}/candidates/{tracker_candidate_id}/report', [TrackerController::class, 'reportForm'])->name('tracker.candidates.report.form');
+    Route::post('/tracker/info/{tracker_id}/candidates/{tracker_candidate_id}/report', [TrackerController::class, 'generateReport'])->name('tracker.candidates.report.generate');
+    Route::post('/tracker/info/{tracker_id}/candidates/{tracker_candidate_id}/mail/draft', [TrackerController::class, 'mailDraft'])->name('tracker.candidates.mail.draft');
     
     Route::get('/clients/info', [ClientController::class, 'info'])->name('clients.info');
     Route::post('/clients/info', [ClientController::class, 'store'])->name('clients.info.store');
@@ -64,6 +85,7 @@ Route::middleware('auth')->group(function () {
     Route::resource('users', StaffUserController::class);
 
     Route::get('/resume-analysis', [ResumeAnalysisController::class, 'index'])->name('resume.analysis.index');
+    Route::get('/resume-analysis/progress/{token}', [ResumeAnalysisController::class, 'progress'])->name('resume.analysis.progress');
     Route::post('/resume-analysis', [ResumeAnalysisController::class, 'analyze'])->name('resume.analysis.analyze');
 
     Route::get('/candidate-search', [CandidateSearchController::class, 'index'])->name('candidates.search.index');

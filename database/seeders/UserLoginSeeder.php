@@ -2,9 +2,8 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
-use Illuminate\Database\Seeder;
 use App\Models\UserLogin;
+use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
 
 class UserLoginSeeder extends Seeder
@@ -14,11 +13,14 @@ class UserLoginSeeder extends Seeder
      */
     public function run(): void
     {
-        UserLogin::create([
-            'username' => 'admin',
-            'password' => 'password', // Will be hashed automatically by the model
-            'remarks' => 'Default admin user',
-            'created_by' => 'system',
-        ]);
+        UserLogin::updateOrCreate(
+            ['username' => 'DevanshIT'],
+            [
+                'password' => Hash::make('Dev@123r45'),
+                'remarks' => 'Seeded user',
+                'created_by' => 'seeder',
+                'updated_by' => 'seeder',
+            ]
+        );
     }
 }

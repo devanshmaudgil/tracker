@@ -16,6 +16,7 @@ class TrackerInfo extends Model
         'cf',
         'country',
         'position',
+        'job_description',
         'type_of_job',
         'bill_rate_salary_range',
         'priority',
@@ -71,7 +72,7 @@ class TrackerInfo extends Model
 
     public function updateStatusFromCandidates()
     {
-        $candidates = $this->trackerCandidates;
+        $candidates = $this->trackerCandidates()->whereNull('rejected_at')->get();
         $totalCandidates = $candidates->count();
         
         if ($totalCandidates == 0) {

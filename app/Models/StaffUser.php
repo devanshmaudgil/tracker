@@ -9,6 +9,7 @@ class StaffUser extends Model
 {
     protected $fillable = [
         'username',
+        'email',
         'profile_photo',
         'date_of_birth',
         'phone_number',
@@ -88,4 +89,9 @@ class StaffUser extends Model
      * Append profile_photo_url when serializing to array/JSON.
      */
     protected $appends = ['profile_photo_url'];
+
+    public function loginAccount()
+    {
+        return $this->hasOne(UserLogin::class, 'staff_user_id');
+    }
 }

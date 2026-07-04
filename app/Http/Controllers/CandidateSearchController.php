@@ -12,13 +12,34 @@ class CandidateSearchController extends Controller
         return view('candidates.search');
     }
 
+    protected const PLATFORMS = [
+        'linkedin' => [
+            'label' => 'LinkedIn',
+            'site'  => 'linkedin.com/in',
+            'domain' => 'linkedin.com',
+        ],
+        'indeed' => [
+            'label' => 'Indeed',
+            'site'  => 'indeed.com/r',
+            'domain' => 'indeed.com',
+        ],
+        'naukri' => [
+            'label' => 'Naukri',
+            'site'  => 'naukri.com',
+            'domain' => 'naukri.com',
+        ],
+    ];
+
     public function search(Request $request)
     {
         $validated = $request->validate([
             'job_description' => ['required', 'string', 'min:20'],
+            'platforms'       => ['required', 'array', 'min:1'],
+            'platforms.*'     => ['string', 'in:linkedin,indeed,naukri'],
         ]);
 
         $jobDescription = $validated['job_description'];
+        $selectedPlatforms = $validated['platforms'];
 
         $geminiKey = config('services.gemini.key') ?: env('GEMINI_API_KEY');
         $serpApiKey = config('services.serpapi.key') ?: env('SERPAPI_API_KEY');
@@ -39,7 +60,6 @@ class CandidateSearchController extends Controller
         $endpoint = "https://generativelanguage.googleapis.com/v1beta/models/{$model}:generateContent?key={$geminiKey}";
 
         try {
-            // Use Gemini to extract a job title and 3–5 search keywords from the JD
             $extractPrompt = "You are a recruiter. Given the following job description, extract:\n"
                 . "1) job_title: A short job title (e.g. 'Senior PHP Developer', 'Data Engineer').\n"
                 . "2) keywords: Exactly 3 to 5 key skills or technologies as separate words or short phrases, suitable for a web search.\n\n"
@@ -81,7 +101,6 @@ class CandidateSearchController extends Controller
             $keywords = is_array($parsed['keywords']) ? $parsed['keywords'] : array_slice(explode(' ', implode(' ', $parsed['keywords'])), 0, 5);
             $keywordString = implode(' ', array_slice($keywords, 0, 4));
 
-            // Build a boolean search string the user can copy
             $booleanParts = [];
             foreach ($keywords as $kw) {
                 $kw = trim($kw);
@@ -89,26 +108,35 @@ class CandidateSearchController extends Controller
                     $booleanParts[] = '"' . $kw . '"';
                 }
             }
-            $booleanQuery = 'site:linkedin.com/in "' . $jobTitle . '"';
-            if (!empty($booleanParts)) {
-                $booleanQuery .= ' AND (' . implode(' OR ', $booleanParts) . ')';
-            }
 
-            // LinkedIn-only search (up to 50 profiles)
-            $linkedInQuery = 'site:linkedin.com/in "' . $jobTitle . '" ' . $keywordString;
-            $linkedInResults = $this->fetchSerpResults($serpApiKey, $linkedInQuery, 50);
-
-            $allResults = [];
-            foreach ($linkedInResults as $r) {
-                $url = $r['link'] ?? '';
-                if (!$url || !str_contains(strtolower($url), 'linkedin.com')) {
-                    continue;
+            $booleanQueries = [];
+            foreach ($selectedPlatforms as $platformKey) {
+                $platform = self::PLATFORMS[$platformKey];
+                $q = 'site:' . $platform['site'] . ' "' . $jobTitle . '"';
+                if (!empty($booleanParts)) {
+                    $q .= ' AND (' . implode(' OR ', $booleanParts) . ')';
                 }
-                $r['source'] = 'LinkedIn';
-                $allResults[] = $r;
+                $booleanQueries[$platform['label']] = $q;
             }
 
-            // Deduplicate by link
+            $resultsPerPlatform = (int) ceil(50 / count($selectedPlatforms));
+            $allResults = [];
+
+            foreach ($selectedPlatforms as $platformKey) {
+                $platform = self::PLATFORMS[$platformKey];
+                $query = 'site:' . $platform['site'] . ' "' . $jobTitle . '" ' . $keywordString;
+                $raw = $this->fetchSerpResults($serpApiKey, $query, $resultsPerPlatform);
+
+                foreach ($raw as $r) {
+                    $url = $r['link'] ?? '';
+                    if (!$url || !str_contains(strtolower($url), $platform['domain'])) {
+                        continue;
+                    }
+                    $r['source'] = $platform['label'];
+                    $allResults[] = $r;
+                }
+            }
+
             $seen = [];
             $uniqueResults = [];
             foreach ($allResults as $r) {
@@ -119,21 +147,20 @@ class CandidateSearchController extends Controller
                 }
             }
 
-            // Limit to at most 50 profiles
             $uniqueResults = array_slice($uniqueResults, 0, 50);
 
-            // Ask Gemini to score how well each profile matches the JD (0–100)
             $scoredResults = $this->scoreProfilesWithGemini($endpoint, $jobDescription, $uniqueResults);
             if (!empty($scoredResults)) {
                 $uniqueResults = $scoredResults;
             }
 
             return view('candidates.search', [
-                'jobDescription' => $jobDescription,
-                'jobTitle' => $jobTitle,
-                'keywords' => $keywords,
-                'booleanQuery' => $booleanQuery,
-                'results' => $uniqueResults,
+                'jobDescription'    => $jobDescription,
+                'jobTitle'          => $jobTitle,
+                'keywords'          => $keywords,
+                'booleanQueries'    => $booleanQueries,
+                'selectedPlatforms' => $selectedPlatforms,
+                'results'           => $uniqueResults,
             ]);
         } catch (\Throwable $e) {
             report($e);
@@ -221,7 +248,7 @@ class CandidateSearchController extends Controller
         }
 
         $prompt = "You are assisting a recruiter.\n"
-            . "You will receive a job description and a list of LinkedIn search results (candidate profiles).\n"
+            . "You will receive a job description and a list of candidate profiles from job platforms (LinkedIn, Indeed, Naukri, etc.).\n"
             . "For each profile, rate how well it matches the job description on a scale of 0 to 100.\n\n"
             . "Rules:\n"
             . "- Only consider information given in the profile title, snippet, and link.\n"

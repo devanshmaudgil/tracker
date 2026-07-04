@@ -134,6 +134,14 @@
         </div>
 
         <div class="form-group">
+            <label for="job_description">Insert Job Description</label>
+            <textarea id="job_description" name="job_description" rows="10" placeholder="Paste the full job description here (role details, skills, responsibilities, etc.)" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-family: inherit; font-size: 14px; line-height: 1.5; resize: vertical;">{{ old('job_description') }}</textarea>
+            @error('job_description')
+                <div style="color: #dc3545; margin-top: 5px; font-size: 14px;">{{ $message }}</div>
+            @enderror
+        </div>
+
+        <div class="form-group">
             <label for="lr">LR (Lead Recruiter)</label>
             <select id="lr" name="lr" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
                 <option value="">Select Lead Recruiter</option>

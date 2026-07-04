@@ -6,7 +6,7 @@
 <div class="content-header">
     <h1>Import Tracker Data from Excel</h1>
     <div style="display: flex; gap: 10px;">
-        <a href="{{ route('tracker.index') }}" class="btn btn-secondary">Back to Tracker</a>
+        <a href="{{ route('tracker.index') }}" class="btn btn-secondary">Back to Recruiter Workspace</a>
     </div>
 </div>
 

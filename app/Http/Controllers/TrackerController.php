@@ -10,14 +10,89 @@ use App\Models\Region;
 use App\Models\TrackerCandidate;
 use App\Models\CandidatePipelineStatus;
 use App\Models\Candidate;
+use App\Models\JobStatus;
+use App\Services\Tracker\CandidatePipelineService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Str;
+use Symfony\Component\Mime\Address;
+use Symfony\Component\Mime\Email;
 use App\Exports\TrackerExport;
 use App\Imports\TrackerImport;
+use Carbon\Carbon;
 
 class TrackerController extends Controller
 {
+    public function __construct(
+        private CandidatePipelineService $pipelineService,
+    ) {
+    }
+
+    private function applyTrackerFilters($query, Request $request, ?int $selectedMonthId, bool $includeSearch = true): void
+    {
+        if ($includeSearch && $request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('position', 'like', "%{$search}%")
+                    ->orWhere('id', 'like', "%{$search}%")
+                    ->orWhereHas('client', function ($q2) use ($search) {
+                        $q2->where('client', 'like', "%{$search}%");
+                    });
+            });
+        }
+
+        if ($selectedMonthId) {
+            $query->where('month_id', $selectedMonthId);
+        }
+
+        if ($request->filled('client_id')) {
+            $query->where('client_id', $request->client_id);
+        }
+
+        if ($request->filled('lead_recruiter_id')) {
+            $query->where('lr', $request->lead_recruiter_id);
+        }
+    }
+
+    private function attentionSummary(Request $request, ?int $selectedMonthId): array
+    {
+        $query = TrackerInfo::query()->whereNotIn('job_status_FK', [17, 18]);
+        $this->applyTrackerFilters($query, $request, $selectedMonthId);
+
+        $today = Carbon::today();
+        $weekEnd = Carbon::today()->endOfWeek();
+
+        return [
+            'overdue' => (clone $query)
+                ->whereNotNull('submission_deadline')
+                ->whereDate('submission_deadline', '<', $today)
+                ->count(),
+            'due_soon' => (clone $query)
+                ->whereNotNull('submission_deadline')
+                ->whereBetween('submission_deadline', [$today, $weekEnd])
+                ->count(),
+            'urgent' => (clone $query)
+                ->where('priority', 'Urgent')
+                ->count(),
+        ];
+    }
+
     public function index(Request $request)
     {
+        if (! $request->ajax() && ! $request->filled('month_id')) {
+            $defaultMonthId = Month::latestMonth()?->id;
+
+            if ($defaultMonthId) {
+                return redirect()->route('tracker.index', array_merge(
+                    $request->query(),
+                    ['month_id' => $defaultMonthId]
+                ));
+            }
+        }
+
+        $months = Month::orderedLatestFirst();
+        $selectedMonthId = Month::resolveSelectedId($request);
+
         $query = TrackerInfo::with(['month', 'client', 'region', 'leadRecruiter', 'jobStatus']);
         
         // Search functionality
@@ -47,9 +122,8 @@ class TrackerController extends Controller
             });
         }
         
-        // Filter by month
-        if ($request->filled('month_id')) {
-            $query->where('month_id', $request->month_id);
+        if ($selectedMonthId) {
+            $query->where('month_id', $selectedMonthId);
         }
         
         // Filter by client
@@ -97,25 +171,7 @@ class TrackerController extends Controller
 
         // Calculate counts for tabs based on current filters (excluding tab itself)
         $baseCountQuery = TrackerInfo::query();
-        if ($request->filled('search')) {
-            $search = $request->search;
-            $baseCountQuery->where(function($q) use ($search) {
-                $q->where('position', 'like', "%$search%")
-                  ->orWhere('id', 'like', "%$search%")
-                  ->orWhereHas('client', function($q2) use ($search) {
-                      $q2->where('client', 'like', "%$search%");
-                  });
-            });
-        }
-        if ($request->filled('month_id')) {
-            $baseCountQuery->where('month_id', $request->month_id);
-        }
-        if ($request->filled('client_id')) {
-            $baseCountQuery->where('client_id', $request->client_id);
-        }
-        if ($request->filled('lead_recruiter_id')) {
-            $baseCountQuery->where('lr', $request->lead_recruiter_id);
-        }
+        $this->applyTrackerFilters($baseCountQuery, $request, $selectedMonthId);
 
         $counts = [
             'demand_raised' => (clone $baseCountQuery)->where('job_status_FK', 1)->count(),
@@ -128,21 +184,42 @@ class TrackerController extends Controller
             'rejected' => (clone $baseCountQuery)->where('job_status_FK', 18)->count(),
         ];
         
+        $totalRequisition = $selectedMonthId
+            ? TrackerInfo::where('month_id', $selectedMonthId)->count()
+            : 0;
+
+        $attentionSummary = $this->attentionSummary($request, $selectedMonthId);
+
         if ($request->ajax()) {
             return response()->json([
                 'table' => view('tracker._table', compact('trackerInfos'))->render(),
                 'pagination' => $trackerInfos->appends(request()->query())->links('vendor.pagination.custom')->render(),
-                'count_text' => "Showing {$trackerInfos->firstItem()} to {$trackerInfos->lastItem()} of {$trackerInfos->total()} entries",
-                'counts' => $counts
+                'count_text' => $trackerInfos->total() > 0
+                    ? "Showing {$trackerInfos->firstItem()} to {$trackerInfos->lastItem()} of {$trackerInfos->total()} entries"
+                    : 'No entries found',
+                'counts' => $counts,
+                'total_requisition' => $totalRequisition,
+                'attention_strip' => view('tracker._attention_strip', compact('attentionSummary'))->render(),
             ]);
         }
         
-        $months = Month::orderBy('id', 'desc')->get();
         $clients = Client::orderBy('client', 'asc')->get();
         $regions = Region::orderBy('region', 'asc')->get();
         $leadRecruiters = StaffUser::orderBy('id', 'desc')->get();
+        $selectedMonth = $months->firstWhere('id', $selectedMonthId);
         
-        return view('tracker.index', compact('trackerInfos', 'months', 'clients', 'regions', 'leadRecruiters', 'counts'));
+        return view('tracker.index', compact(
+            'trackerInfos',
+            'months',
+            'clients',
+            'regions',
+            'leadRecruiters',
+            'counts',
+            'selectedMonthId',
+            'selectedMonth',
+            'totalRequisition',
+            'attentionSummary'
+        ));
     }
 
     public function create()
@@ -165,6 +242,7 @@ class TrackerController extends Controller
             'cf' => 'nullable|in:Canada,USA',
             'country' => 'nullable|string|max:255',
             'position' => 'nullable|string|max:255',
+            'job_description' => 'nullable|string',
             'type_of_job' => 'nullable|in:onsite,remote,hybrid',
             'bill_rate_salary_range' => 'nullable|string|max:255',
             'priority' => 'nullable|in:Urgent,Low,High,Medium',
@@ -207,15 +285,93 @@ class TrackerController extends Controller
 
     public function info(string $id)
     {
-        $trackerInfo = TrackerInfo::with(['month', 'client', 'region', 'leadRecruiter', 'trackerCandidates.candidate.location', 'trackerCandidates.pipelineStatus'])
+        $trackerInfo = TrackerInfo::with(['month', 'client', 'region', 'leadRecruiter', 'jobStatus'])
             ->findOrFail($id);
-        
-        // Get all available candidates for assignment dropdown
-        $availableCandidates = \App\Models\Candidate::with('location')->orderBy('full_name', 'asc')->get();
-        
-        $jobStatuses = \App\Models\JobStatus::all();
-        
-        return view('tracker.info', compact('trackerInfo', 'availableCandidates', 'jobStatuses'));
+
+        $notPlaced = fn ($q) => $q->where(function ($inner) {
+            $inner->whereDoesntHave('pipelineStatus')
+                ->orWhereHas('pipelineStatus', function ($pq) {
+                    $pq->where(function ($p) {
+                        $p->whereNull('final_status_placement_completion')
+                            ->orWhere('final_status_placement_completion', '!=', 'Confirmed');
+                    });
+                });
+        });
+
+        $activeCandidates = $trackerInfo->trackerCandidates()
+            ->with(['candidate.location', 'pipelineStatus', 'status'])
+            ->whereNull('rejected_at')
+            ->whereNull('approved_at')
+            ->where($notPlaced)
+            ->get();
+
+        $approvedCandidates = $trackerInfo->trackerCandidates()
+            ->with(['candidate.location', 'pipelineStatus', 'status'])
+            ->whereNull('rejected_at')
+            ->whereNotNull('approved_at')
+            ->where($notPlaced)
+            ->orderByDesc('approved_at')
+            ->get();
+
+        $placedCandidates = $trackerInfo->trackerCandidates()
+            ->with(['candidate.location', 'pipelineStatus', 'status'])
+            ->whereNull('rejected_at')
+            ->whereHas('pipelineStatus', fn ($q) => $q->where('final_status_placement_completion', 'Confirmed'))
+            ->get()
+            ->sortByDesc(fn ($tc) => $tc->pipelineStatus?->placement_completion_date)
+            ->values();
+
+        $rejectedCandidates = $trackerInfo->trackerCandidates()
+            ->with(['candidate.location', 'pipelineStatus', 'status'])
+            ->whereNotNull('rejected_at')
+            ->orderByDesc('rejected_at')
+            ->get();
+
+        $pipelineCount = $activeCandidates->count() + $approvedCandidates->count();
+        $placementConfirmedLabel = 'Candidate Placement Confirmed';
+
+        $assignedCandidateIds = $trackerInfo->trackerCandidates()->pluck('candidate_id');
+
+        $availableCandidates = Candidate::with('location')->orderBy('full_name', 'asc')->get();
+        $jobStatuses = JobStatus::all();
+        $pipelineService = app(CandidatePipelineService::class);
+        $approvedStageLabels = TrackerCandidate::approvedStageLabels();
+
+        $staffEmails = StaffUser::whereNotNull('email')
+            ->where('email', '!=', '')
+            ->orderBy('username')
+            ->get(['id', 'username', 'email']);
+
+        $recruiterEmail = Auth::user()?->staffUser?->email;
+        $recruiterName = Auth::user()?->staffUser?->username ?? Auth::user()?->username ?? 'Recruiter';
+
+        $trackerLocation = $trackerInfo->region
+            ? trim(($trackerInfo->region->city ? $trackerInfo->region->city . ', ' : '') . $trackerInfo->region->region . ($trackerInfo->cf ? ', ' . $trackerInfo->cf : ''))
+            : ($trackerInfo->cf ?? '');
+
+        if ($trackerInfo->type_of_job) {
+            $jobTypeLabel = ucfirst($trackerInfo->type_of_job);
+            $trackerLocation .= $trackerLocation ? " ({$jobTypeLabel})" : $jobTypeLabel;
+        }
+
+        return view('tracker.info', compact(
+            'trackerInfo',
+            'activeCandidates',
+            'approvedCandidates',
+            'placedCandidates',
+            'rejectedCandidates',
+            'pipelineCount',
+            'placementConfirmedLabel',
+            'assignedCandidateIds',
+            'availableCandidates',
+            'jobStatuses',
+            'pipelineService',
+            'approvedStageLabels',
+            'staffEmails',
+            'recruiterEmail',
+            'recruiterName',
+            'trackerLocation',
+        ));
     }
 
     public function edit(string $id)
@@ -239,6 +395,7 @@ class TrackerController extends Controller
             'cf' => 'nullable|in:Canada,USA',
             'country' => 'nullable|string|max:255',
             'position' => 'nullable|string|max:255',
+            'job_description' => 'nullable|string',
             'type_of_job' => 'nullable|in:onsite,remote,hybrid',
             'bill_rate_salary_range' => 'nullable|string|max:255',
             'priority' => 'nullable|in:Urgent,Low,High,Medium',
@@ -421,11 +578,21 @@ class TrackerController extends Controller
 
     public function getPipelineStatus(string $trackerId, string $trackerCandidateId)
     {
-        $trackerCandidate = TrackerCandidate::with('pipelineStatus')->findOrFail($trackerCandidateId);
-        
+        $trackerCandidate = TrackerCandidate::with(['pipelineStatus', 'status', 'candidate'])->findOrFail($trackerCandidateId);
+        $hasResume = (bool) $trackerCandidate->candidate?->resume_file_url;
+
         if (!$trackerCandidate->pipelineStatus) {
             return response()->json([
                 'candidate_identified' => false,
+                'requirement_reviewed' => false,
+                'doc_resume_collected' => false,
+                'doc_govt_id_collected' => false,
+                'doc_work_auth_collected' => false,
+                'doc_linkedin_collected' => false,
+                'rtr_signed' => false,
+                'has_resume' => $hasResume,
+                'checklist_items' => [],
+                'checklist_progress' => 0,
                 'resume_reviewed_by_recruiter' => null,
                 'resume_reviewed_date' => null,
                 'recruiter_screening_call' => null,
@@ -449,12 +616,27 @@ class TrackerController extends Controller
                 'final_status_placement_completion' => null,
                 'placement_completion_date' => null,
                 'current_status_id' => $trackerCandidate->current_status_id,
+                'current_status_label' => $trackerCandidate->status?->status ?? 'Unknown',
             ]);
         }
 
         $status = $trackerCandidate->pipelineStatus;
+        $items = $this->pipelineService->checklistItems($status, $hasResume);
+        $placementLabel = $status->final_status_placement_completion === 'Confirmed'
+            ? 'Candidate Placement Confirmed'
+            : ($trackerCandidate->status?->status ?? 'Unknown');
+
         return response()->json([
             'candidate_identified' => $status->candidate_identified,
+            'requirement_reviewed' => $status->requirement_reviewed,
+            'doc_resume_collected' => (bool) $status->doc_resume_collected,
+            'doc_govt_id_collected' => $status->doc_govt_id_collected,
+            'doc_work_auth_collected' => $status->doc_work_auth_collected,
+            'doc_linkedin_collected' => $status->doc_linkedin_collected,
+            'rtr_signed' => $status->rtr_signed,
+            'has_resume' => $hasResume,
+            'checklist_items' => $items,
+            'checklist_progress' => $this->pipelineService->checklistProgress($items),
             'resume_reviewed_by_recruiter' => $status->resume_reviewed_by_recruiter,
             'resume_reviewed_date' => $status->resume_reviewed_date ? $status->resume_reviewed_date->format('Y-m-d') : null,
             'recruiter_screening_call' => $status->recruiter_screening_call,
@@ -478,12 +660,18 @@ class TrackerController extends Controller
             'final_status_placement_completion' => $status->final_status_placement_completion,
             'placement_completion_date' => $status->placement_completion_date ? $status->placement_completion_date->format('Y-m-d') : null,
             'current_status_id' => $trackerCandidate->current_status_id,
+            'current_status_label' => $placementLabel,
         ]);
     }
 
     public function updatePipelineStatus(Request $request, string $trackerId, string $trackerCandidateId)
     {
         $request->validate([
+            'requirement_reviewed' => 'nullable|boolean',
+            'doc_govt_id_collected' => 'nullable|boolean',
+            'doc_work_auth_collected' => 'nullable|boolean',
+            'doc_linkedin_collected' => 'nullable|boolean',
+            'rtr_signed' => 'nullable|boolean',
             'candidate_identified' => 'nullable|boolean',
             'resume_reviewed_by_recruiter' => 'nullable|in:Completed,Pending',
             'resume_reviewed_date' => 'nullable|date',
@@ -507,113 +695,493 @@ class TrackerController extends Controller
             'candidate_project_start_date' => 'nullable|date',
             'final_status_placement_completion' => 'nullable|in:Confirmed,Not Confirmed',
             'placement_completion_date' => 'nullable|date',
-            'current_status_id' => 'required|exists:job_status,id',
         ]);
 
-        $trackerCandidate = TrackerCandidate::findOrFail($trackerCandidateId);
-        
-        // Automatic Status Progression Logic
-        $currentStatusId = $trackerCandidate->current_status_id;
-        
-        if ($currentStatusId == 2 && ($request->resume_reviewed_by_recruiter == 'Completed')) {
-            $request->merge(['current_status_id' => 3]); // Move to Resume Reviewed
-        } elseif ($currentStatusId == 3 && ($request->recruiter_screening_call == 'Completed')) {
-            $request->merge(['current_status_id' => 4]); // Move to Screening Call
-        } elseif ($currentStatusId == 4 && $request->has('candidate_shortlisted')) {
-            $request->merge(['current_status_id' => 5]); // Move to Shortlisted
-        } elseif ($currentStatusId == 5 && $request->resume_submitted_to_client == 'Submitted') {
-            $request->merge(['current_status_id' => 6]); // Move to Submitted to Client
-        } elseif ($currentStatusId == 6 && in_array($request->radix_internal_interview_prep, ['Planned', 'Completed', 'Not Required'])) {
-            $request->merge(['current_status_id' => 7]); // Move to Internal Prep
-        } elseif ($currentStatusId == 7 && $request->client_resume_review == 'Approved') {
-            $request->merge(['current_status_id' => 8]); // Move to Resume Accepted
-        } elseif ($currentStatusId == 8 && $request->filled('client_interview_round_1_date')) {
-            $request->merge(['current_status_id' => 9]); // Move to Interview 1
-        } elseif ($currentStatusId == 9 && $request->filled('client_interview_round_2_date')) {
-            $request->merge(['current_status_id' => 10]); // Move to Interview 2
-        } elseif ($currentStatusId == 10 && $request->additional_rounds_select == 'Yes') {
-            $request->merge(['current_status_id' => 11]); // Move to Additional Rounds
-        } elseif ($currentStatusId == 10 && $request->additional_rounds_select == 'No') {
-            $request->merge(['current_status_id' => 12]); // Move to Client Decision
-        } elseif ($currentStatusId == 11 && $request->additional_rounds_select == 'No') {
-            $request->merge(['current_status_id' => 12]); // Move to Client Decision
-        } elseif ($currentStatusId == 12 && $request->client_decision == 'Selected') {
-            $request->merge(['current_status_id' => 13]); // Move to Client Confirmation
-        } elseif ($currentStatusId == 13 && $request->has('client_confirmation_received')) {
-            $request->merge(['current_status_id' => 14]); // Move to Offer Extended
-        } elseif ($currentStatusId == 14 && $request->has('offer_extended_to_candidate')) {
-            $request->merge(['current_status_id' => 15]); // Move to Background Check
-        } elseif ($currentStatusId == 15 && $request->background_check == 'Completed') {
-            $request->merge(['current_status_id' => 16]); // Move to Project Start
-        } elseif ($currentStatusId == 16 && $request->filled('candidate_project_start_date')) {
-            $request->merge(['current_status_id' => 17]); // Move to Placement Completion (Confirmed)
-        } elseif ($currentStatusId == 17 && $request->final_status_placement_completion == 'Rejected') {
-            $request->merge(['current_status_id' => 18]); // Move to Placement Rejected
-        } elseif ($currentStatusId == 17 && $request->final_status_placement_completion == 'Confirmed') {
-            $request->merge(['current_status_id' => 17]); // Stay at Confirmed
-        } elseif ($currentStatusId == 12 && $request->client_decision == 'Rejected') {
-            // Automatically remove candidate from job
-            if ($trackerCandidate->pipelineStatus) {
-                $trackerCandidate->pipelineStatus->delete();
-            }
-            $trackerCandidate->delete();
-            
-            $trackerInfo = TrackerInfo::find($trackerId);
-            if ($trackerInfo) {
-                $trackerInfo->updateStatusFromCandidates();
-            }
-            
-            return redirect()->route('tracker.info', $trackerId)->with('success', 'Candidate rejected by client and removed from job.');
-        } elseif ($currentStatusId == 7 && $request->client_resume_review == 'Rejected') {
-            // Automatically remove candidate from job
-            if ($trackerCandidate->pipelineStatus) {
-                $trackerCandidate->pipelineStatus->delete();
-            }
-            $trackerCandidate->delete();
-            
-            // Update overall job status
-            $trackerInfo = TrackerInfo::find($trackerId);
-            if ($trackerInfo) {
-                $trackerInfo->updateStatusFromCandidates();
-            }
-            
-            return redirect()->route('tracker.info', $trackerId)->with('success', 'Candidate rejected by client and removed from job.');
+        $trackerCandidate = TrackerCandidate::with(['pipelineStatus', 'candidate'])->findOrFail($trackerCandidateId);
+
+        if ($request->client_decision === 'Rejected') {
+            return $this->markCandidateRejected($trackerId, $trackerCandidate, 'Client decision: Rejected');
         }
 
-        // Refresh data from request after merges
-        $data = array_filter($request->all(), function($value) {
-            return $value !== null && $value !== '';
-        });
-
-        // Convert checkboxes/logic
-        $data['candidate_identified'] = $request->has('candidate_identified') || $currentStatusId >= 2;
-        $data['candidate_shortlisted'] = $request->has('candidate_shortlisted') || $currentStatusId >= 5;
-        $data['client_confirmation_received'] = $request->has('client_confirmation_received') || $currentStatusId >= 14;
-        $data['offer_extended_to_candidate'] = $request->has('offer_extended_to_candidate') || $currentStatusId >= 15;
-        
-        // Handle additional_rounds from select if present
-        if ($request->has('additional_rounds_select')) {
-            $data['additional_rounds'] = ($request->additional_rounds_select == 'Yes');
+        if ($request->client_resume_review === 'Rejected') {
+            return $this->markCandidateRejected($trackerId, $trackerCandidate, 'Client resume review: Rejected');
         }
 
-        if ($trackerCandidate->pipelineStatus) {
-            $trackerCandidate->pipelineStatus->update($data);
-        } else {
-            $data['tracker_candidate_id'] = $trackerCandidate->id;
-            CandidatePipelineStatus::create($data);
-        }
+        $data = $this->buildPipelineDataFromRequest($request, $trackerCandidate);
 
-        // Update current status in tracker_candidates
-        $trackerCandidate->update([
-            'current_status_id' => $request->current_status_id
-        ]);
+        $pipeline = $this->upsertPipelineStatus($trackerCandidate, $data);
+        $hasResume = (bool) $trackerCandidate->candidate?->resume_file_url;
+        $newStatusId = $this->resolveTrackerStatusId($trackerCandidate, $pipeline, $hasResume);
 
-        // Update overall job status based on majority
+        $trackerCandidate->update(['current_status_id' => $newStatusId]);
+
         $trackerInfo = TrackerInfo::find($trackerId);
         if ($trackerInfo) {
             $trackerInfo->updateStatusFromCandidates();
         }
 
         return redirect()->route('tracker.info', $trackerId)->with('success', 'Pipeline status updated successfully.');
+    }
+
+    public function updateChecklist(Request $request, string $trackerId, string $trackerCandidateId)
+    {
+        $request->validate([
+            'field' => 'required|string|max:64',
+            'checked' => 'sometimes|boolean',
+            'details' => 'sometimes|array',
+            'details.resume_reviewed_by_recruiter' => 'nullable|in:Completed,Pending',
+            'details.resume_reviewed_date' => 'nullable|date',
+            'details.recruiter_screening_call' => 'nullable|in:Completed,Pending,No Show',
+            'details.recruiter_screening_call_date' => 'nullable|date',
+            'details.resume_submitted_to_client' => 'nullable|in:Submitted,Not Submitted',
+        ]);
+
+        $field = $request->input('field');
+        if (!$this->pipelineService->isChecklistField($field)) {
+            return response()->json(['message' => 'Invalid checklist field.'], 422);
+        }
+
+        $trackerCandidate = TrackerCandidate::with(['pipelineStatus', 'candidate', 'status'])->findOrFail($trackerCandidateId);
+        $hasResume = (bool) $trackerCandidate->candidate?->resume_file_url;
+
+        if ($request->has('details')) {
+            $updates = $this->pipelineService->buildChecklistDetailUpdates($field, $request->input('details'));
+            $cascaded = [];
+
+            if ($updates === []) {
+                return response()->json(['message' => 'No valid pipeline details for this field.'], 422);
+            }
+
+            $pipeline = $this->upsertPipelineStatus($trackerCandidate, $updates)->fresh();
+
+            if (!$this->pipelineService->isChecklistFieldDone($field, $pipeline, $hasResume)) {
+                $cascade = $this->pipelineService->downstreamCascadeUpdates($field, $hasResume);
+                if ($cascade !== []) {
+                    $cascaded = $this->pipelineService->cascadeUncheckPreview($field, $hasResume);
+                    $pipeline = $this->upsertPipelineStatus($trackerCandidate, $cascade)->fresh();
+                }
+            }
+        } else {
+            if (!$request->has('checked')) {
+                return response()->json(['message' => 'Either checked or details is required.'], 422);
+            }
+
+            $checked = (bool) $request->boolean('checked');
+
+            if ($field === 'doc_resume' && $hasResume && !$checked) {
+                return response()->json(['message' => 'Resume is already on file from the uploaded CV.'], 422);
+            }
+
+            $updates = $this->pipelineService->applyChecklistUpdate($field, $checked, $hasResume);
+            $cascaded = !$checked
+                ? $this->pipelineService->cascadeUncheckPreview($field, $hasResume)
+                : [$field];
+        }
+
+        if ($updates === []) {
+            return response()->json(['message' => 'Invalid checklist field.'], 422);
+        }
+
+        $pipeline = $this->upsertPipelineStatus($trackerCandidate, $updates);
+        $pipeline = $pipeline->fresh();
+        $newStatusId = $this->pipelineService->resolveChecklistStatusId($pipeline, $hasResume);
+
+        $trackerCandidate->update(['current_status_id' => $newStatusId]);
+        $trackerCandidate->load('status');
+
+        $trackerInfo = TrackerInfo::find($trackerId);
+        if ($trackerInfo) {
+            $trackerInfo->updateStatusFromCandidates();
+        }
+
+        return $this->checklistJsonResponse($trackerCandidate, $pipeline, $hasResume, $cascaded);
+    }
+
+    /**
+     * @param  list<string>  $cascadedFields
+     */
+    private function checklistJsonResponse(
+        TrackerCandidate $trackerCandidate,
+        CandidatePipelineStatus $pipeline,
+        bool $hasResume,
+        array $cascadedFields = []
+    ) {
+        $items = $this->pipelineService->checklistItems($pipeline, $hasResume);
+
+        return response()->json([
+            'success' => true,
+            'current_status_id' => $trackerCandidate->current_status_id,
+            'current_status_label' => $trackerCandidate->status?->status ?? 'Unknown',
+            'checklist_items' => $items,
+            'checklist_progress' => $this->pipelineService->checklistProgress($items),
+            'cascaded_fields' => $cascadedFields,
+            'pipeline' => $this->pipelineService->preSubmissionPipelineSnapshot($pipeline, $hasResume),
+        ]);
+    }
+
+    private function markCandidateRejected(string $trackerId, TrackerCandidate $trackerCandidate, string $reason)
+    {
+        $trackerCandidate->update([
+            'rejected_at' => now(),
+            'rejection_reason' => $reason,
+            'current_status_id' => 18,
+        ]);
+
+        $trackerInfo = TrackerInfo::find($trackerId);
+        if ($trackerInfo) {
+            $trackerInfo->updateStatusFromCandidates();
+        }
+
+        return redirect()->route('tracker.info', $trackerId)->with('success', 'Candidate marked as rejected.');
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function buildPipelineDataFromRequest(Request $request, TrackerCandidate $trackerCandidate): array
+    {
+        $fields = [
+            'resume_reviewed_by_recruiter', 'resume_reviewed_date',
+            'recruiter_screening_call', 'recruiter_screening_call_date',
+            'resume_submitted_to_client',
+            'radix_internal_interview_prep', 'radix_internal_interview_prep_date',
+            'client_resume_review',
+            'client_interview_round_1_date', 'client_interview_round_2_date',
+            'client_decision', 'client_decision_date',
+            'client_confirmation_date', 'offer_extended_date',
+            'background_check', 'candidate_project_start_date',
+            'final_status_placement_completion', 'placement_completion_date',
+        ];
+
+        $data = [];
+        foreach ($fields as $field) {
+            if ($request->has($field) && $request->input($field) !== '') {
+                $data[$field] = $request->input($field);
+            }
+        }
+
+        $existing = $trackerCandidate->pipelineStatus;
+
+        $data['candidate_identified'] = $request->boolean('candidate_identified') || $trackerCandidate->current_status_id >= 2;
+        $data['requirement_reviewed'] = $request->has('requirement_reviewed')
+            ? $request->boolean('requirement_reviewed')
+            : (bool) ($existing?->requirement_reviewed);
+        $data['doc_govt_id_collected'] = $request->has('doc_govt_id_collected')
+            ? $request->boolean('doc_govt_id_collected')
+            : (bool) ($existing?->doc_govt_id_collected);
+        $data['doc_work_auth_collected'] = $request->has('doc_work_auth_collected')
+            ? $request->boolean('doc_work_auth_collected')
+            : (bool) ($existing?->doc_work_auth_collected);
+        $data['doc_linkedin_collected'] = $request->has('doc_linkedin_collected')
+            ? $request->boolean('doc_linkedin_collected')
+            : (bool) ($existing?->doc_linkedin_collected);
+        $data['rtr_signed'] = $request->has('rtr_signed')
+            ? $request->boolean('rtr_signed')
+            : (bool) ($existing?->rtr_signed);
+        $data['candidate_shortlisted'] = $request->boolean('candidate_shortlisted');
+        $data['client_confirmation_received'] = $request->boolean('client_confirmation_received');
+        $data['offer_extended_to_candidate'] = $request->boolean('offer_extended_to_candidate');
+
+        if ($request->has('additional_rounds_select')) {
+            $data['additional_rounds'] = $request->input('additional_rounds_select') === 'Yes';
+        } elseif ($request->has('additional_rounds')) {
+            $data['additional_rounds'] = $request->boolean('additional_rounds');
+        }
+
+        return $data;
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     */
+    private function upsertPipelineStatus(TrackerCandidate $trackerCandidate, array $data): CandidatePipelineStatus
+    {
+        if ($trackerCandidate->pipelineStatus) {
+            $trackerCandidate->pipelineStatus->update($data);
+
+            return $trackerCandidate->pipelineStatus->fresh();
+        }
+
+        $data['tracker_candidate_id'] = $trackerCandidate->id;
+        $data['candidate_identified'] = $data['candidate_identified'] ?? true;
+
+        return CandidatePipelineStatus::create($data);
+    }
+
+    public function rejectCandidate(Request $request, string $trackerId, string $trackerCandidateId)
+    {
+        $request->validate([
+            'rejection_reason' => 'nullable|string|max:1000',
+        ]);
+
+        $trackerCandidate = TrackerCandidate::findOrFail($trackerCandidateId);
+
+        $trackerCandidate->update([
+            'rejected_at'      => now(),
+            'rejection_reason' => $request->rejection_reason ?: 'No reason provided.',
+            'current_status_id' => 18,
+        ]);
+
+        $trackerInfo = TrackerInfo::find($trackerId);
+        if ($trackerInfo) {
+            $trackerInfo->updateStatusFromCandidates();
+        }
+
+        return redirect()->route('tracker.info', $trackerId)
+            ->with('success', 'Candidate has been rejected and moved to the rejected section.');
+    }
+
+    public function revertCandidate(string $trackerId, string $trackerCandidateId)
+    {
+        $trackerCandidate = TrackerCandidate::with('pipelineStatus')->findOrFail($trackerCandidateId);
+
+        if (!$trackerCandidate->rejected_at) {
+            return redirect()->route('tracker.info', $trackerId)
+                ->with('error', 'Only rejected candidates can be reverted.');
+        }
+
+        $this->pipelineService->resetCandidateToFreshStart($trackerCandidate);
+
+        $trackerInfo = TrackerInfo::find($trackerId);
+        if ($trackerInfo) {
+            $trackerInfo->updateStatusFromCandidates();
+        }
+
+        return redirect()->route('tracker.info', $trackerId)
+            ->with('success', 'Candidate reverted to the pipeline. Checklist and pipeline have been reset.');
+    }
+
+    public function markApproved(string $trackerId, string $trackerCandidateId)
+    {
+        $trackerCandidate = TrackerCandidate::with(['pipelineStatus', 'candidate'])->findOrFail($trackerCandidateId);
+
+        if ($trackerCandidate->rejected_at) {
+            return redirect()->route('tracker.info', $trackerId)
+                ->with('error', 'Rejected candidates cannot be marked as approved.');
+        }
+
+        if ($trackerCandidate->approved_at) {
+            return redirect()->route('tracker.info', $trackerId)
+                ->with('error', 'This candidate is already marked as approved.');
+        }
+
+        if ($trackerCandidate->isPipelinePlaced()) {
+            return redirect()->route('tracker.info', $trackerId)
+                ->with('error', 'This candidate is already placed via the pipeline.');
+        }
+
+        $hasResume = (bool) $trackerCandidate->candidate?->resume_file_url;
+        if (!$this->pipelineService->isChecklistComplete($trackerCandidate->pipelineStatus, $hasResume)) {
+            return redirect()->route('tracker.info', $trackerId)
+                ->with('error', 'Complete every checklist step before marking this candidate as approved.');
+        }
+
+        $trackerCandidate->update([
+            'approved_at' => now(),
+            'approved_stage' => TrackerCandidate::APPROVED_STAGE_IN_PROGRESS,
+        ]);
+
+        $trackerInfo = TrackerInfo::find($trackerId);
+        if ($trackerInfo) {
+            $trackerInfo->updateStatusFromCandidates();
+        }
+
+        return redirect()->route('tracker.info', $trackerId)
+            ->with('success', 'Candidate marked as approved successfully.');
+    }
+
+    public function updateApprovedStage(Request $request, string $trackerId, string $trackerCandidateId)
+    {
+        $request->validate([
+            'approved_stage' => 'required|in:' . implode(',', TrackerCandidate::APPROVED_STAGES),
+        ]);
+
+        $trackerCandidate = TrackerCandidate::with('pipelineStatus')->findOrFail($trackerCandidateId);
+
+        if (!$trackerCandidate->approved_at) {
+            return redirect()->route('tracker.info', $trackerId)
+                ->with('error', 'Only approved candidates can have their post-approval status updated.');
+        }
+
+        if ($trackerCandidate->isPipelinePlaced()) {
+            return redirect()->route('tracker.info', $trackerId)
+                ->with('error', 'Placed candidates cannot have their status changed here.');
+        }
+
+        $trackerCandidate->update(['approved_stage' => $request->input('approved_stage')]);
+
+        return redirect()->route('tracker.info', $trackerId)
+            ->with('success', 'Candidate status updated to ' . $trackerCandidate->fresh()->approvedStageLabel() . '.');
+    }
+
+    /**
+     * Resolve tracker candidate job status, forcing placement-confirmed when applicable.
+     */
+    private function resolveTrackerStatusId(
+        TrackerCandidate $trackerCandidate,
+        CandidatePipelineStatus $pipeline,
+        bool $hasResume
+    ): int {
+        if ($pipeline->final_status_placement_completion === 'Confirmed') {
+            $placementId = JobStatus::where('status', 'Candidate Placement Confirmed')->value('id');
+            if ($placementId) {
+                return (int) $placementId;
+            }
+        }
+
+        return $this->pipelineService->resolveStatusId(
+            $pipeline,
+            $hasResume,
+            (int) $trackerCandidate->current_status_id,
+            false
+        );
+    }
+
+    public function mailDraft(Request $request, string $trackerId, string $trackerCandidateId)
+    {
+        $validated = $request->validate([
+            'from' => ['required', 'email', 'regex:/@rinfinite\.com$/i'],
+            'to' => 'required|email',
+            'cc' => 'nullable|array',
+            'cc.*' => 'email',
+            'subject' => 'required|string|max:500',
+            'body' => 'required|string',
+            'candidate_name' => 'nullable|string|max:255',
+        ]);
+
+        TrackerCandidate::where('tracker_info_id', $trackerId)->findOrFail($trackerCandidateId);
+
+        $recruiterName = Auth::user()?->staffUser?->username ?? Auth::user()?->username ?? 'Recruiter';
+
+        $email = (new Email())
+            ->from(new Address($validated['from'], $recruiterName))
+            ->to($validated['to'])
+            ->subject($validated['subject']);
+
+        if (! empty($validated['cc'])) {
+            $email->cc(...array_map(fn (string $addr) => new Address($addr), $validated['cc']));
+        }
+
+        $body = $validated['body'];
+        $logoPath = public_path('logo.png');
+        if (! file_exists($logoPath)) {
+            $logoPath = public_path('email_logo.png');
+        }
+        if (! file_exists($logoPath)) {
+            $logoPath = public_path('report_banner.png');
+        }
+
+        if (file_exists($logoPath)) {
+            $email->embedFromPath($logoPath, 'company_logo');
+            $cidImg = '<img src="cid:company_logo" alt="RADiiX INFINITEii" style="max-width:140px;height:auto;display:block;">';
+            $body = preg_replace(
+                '/<img[^>]+src=["\'][^"\']*(?:logo|email_logo|report_banner)\.png[^"\']*["\'][^>]*>/i',
+                $cidImg,
+                $body
+            );
+            if (! str_contains($body, 'cid:company_logo')) {
+                $body .= '<p style="margin-top:20px;">' . $cidImg . '</p>';
+            }
+        }
+
+        $email->html($body);
+
+        $mime = $email->toString();
+        if (! str_contains($mime, 'X-Unsent:')) {
+            $mime = preg_replace('/^(MIME-Version:)/m', "X-Unsent: 1\r\n$1", $mime, 1);
+        }
+
+        $slug = Str::slug($validated['candidate_name'] ?? 'candidate') ?: 'candidate';
+        $filename = 'initialization-' . $slug . '.eml';
+        $disposition = $request->boolean('download') ? 'attachment' : 'inline';
+
+        return response($mime, 200, [
+            'Content-Type' => 'message/rfc822',
+            'Content-Disposition' => $disposition . '; filename="' . $filename . '"',
+        ]);
+    }
+
+    public function reportForm(string $trackerId, string $trackerCandidateId)
+    {
+        $trackerCandidate = TrackerCandidate::with([
+            'candidate.location',
+            'pipelineStatus',
+            'status',
+        ])->findOrFail($trackerCandidateId);
+
+        $trackerInfo = TrackerInfo::with([
+            'month', 'client', 'region', 'leadRecruiter', 'jobStatus',
+        ])->findOrFail($trackerId);
+
+        return view('tracker.report_form', compact('trackerCandidate', 'trackerInfo'));
+    }
+
+    public function generateReport(Request $request, string $trackerId, string $trackerCandidateId)
+    {
+        $request->validate([
+            'recruiter_name'                 => 'nullable|string|max:255',
+            'candidate_summary'              => 'nullable|string',
+            'candidate_strong_points'        => 'nullable|string',
+            'candidate_jd_skills'            => 'nullable|string',
+            'additional_notes'               => 'nullable|string',
+            'skill_communication_score'      => 'nullable|integer|min:1|max:10',
+            'skill_communication_notes'      => 'nullable|string',
+            'skill_technical_score'          => 'nullable|integer|min:1|max:10',
+            'skill_technical_notes'          => 'nullable|string',
+            'skill_problem_solving_score'    => 'nullable|integer|min:1|max:10',
+            'skill_problem_solving_notes'    => 'nullable|string',
+            'overall_recommendation'         => 'nullable|string',
+        ]);
+
+        $trackerCandidate = TrackerCandidate::with([
+            'candidate.location',
+            'pipelineStatus',
+            'status',
+        ])->findOrFail($trackerCandidateId);
+
+        $trackerInfo = TrackerInfo::with([
+            'month', 'client', 'region', 'leadRecruiter', 'jobStatus',
+        ])->findOrFail($trackerId);
+
+        // Build structured skills assessment from manual input
+        $skillDefs = [
+            'Communication Skills'    => ['skill_communication_score',   'skill_communication_notes'],
+            'Technical Proficiency'   => ['skill_technical_score',        'skill_technical_notes'],
+            'Professional Approach' => ['skill_problem_solving_score',  'skill_problem_solving_notes'],
+        ];
+
+        $skills = [];
+        foreach ($skillDefs as $label => [$scoreKey, $notesKey]) {
+            $score = $request->input($scoreKey);
+            $notes = trim((string) $request->input($notesKey, ''));
+            if ($score || $notes) {
+                $skills[] = [
+                    'label' => $label,
+                    'score' => $score ?: null,
+                    'notes' => $notes,
+                ];
+            }
+        }
+
+        // Brand assets sourced from the application (null-safe helper handles missing files)
+        $bannerPath    = public_path('report_banner.png');
+        $logoPath      = public_path('logo.png');
+        $watermarkPath = public_path('watermark.png');
+
+        $reportService = new \App\Services\Report\CandidateReportService();
+
+        return $reportService->generate($trackerInfo, $trackerCandidate, [
+            'company_name'           => 'RADiiX INFINITEii',
+            'recruiter_name'         => $request->recruiter_name ?: ($trackerInfo->leadRecruiter->username ?? 'RADiiX INFINITEii'),
+            'banner_path'            => $bannerPath,
+            'logo_path'              => $logoPath,
+            'watermark_path'         => $watermarkPath,
+            'candidate_summary'      => $request->candidate_summary,
+            'candidate_strong_points'=> $request->candidate_strong_points,
+            'candidate_jd_skills'    => $request->candidate_jd_skills,
+            'skills'                 => $skills,
+            'overall_recommendation' => $request->overall_recommendation,
+            'additional_notes'       => $request->additional_notes,
+        ]);
     }
 }

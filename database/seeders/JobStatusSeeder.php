@@ -43,10 +43,10 @@ class JobStatusSeeder extends Seeder
                 $initial .= strtoupper(substr($words[1], 0, 1));
             }
 
-            \App\Models\JobStatus::create([
-                'status' => $status,
-                'status_initial' => $initial,
-            ]);
+            \App\Models\JobStatus::firstOrCreate(
+                ['status' => $status],
+                ['status_initial' => $initial]
+            );
         }
     }
 }

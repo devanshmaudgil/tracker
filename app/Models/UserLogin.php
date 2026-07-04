@@ -12,6 +12,7 @@ class UserLogin extends Authenticatable
     protected $table = 'user_login';
 
     protected $fillable = [
+        'staff_user_id',
         'username',
         'password',
         'remember_token',
@@ -30,5 +31,10 @@ class UserLogin extends Authenticatable
         return [
             'password' => 'hashed',
         ];
+    }
+
+    public function staffUser()
+    {
+        return $this->belongsTo(StaffUser::class, 'staff_user_id');
     }
 }
