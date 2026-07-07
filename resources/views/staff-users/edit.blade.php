@@ -78,7 +78,8 @@
                                     <img src="{{ $user->profile_photo_url }}" alt="" style="width: 64px; height: 64px; border-radius: 10px; object-fit: cover; border: 2px solid #f1cd86;">
                                 </div>
                             @endif
-                            <input type="file" id="profile_photo" name="profile_photo" accept="image/*">
+                            <input type="file" id="profile_photo" name="profile_photo" accept=".jpg,.jpeg,.png,image/jpeg,image/png">
+                            <span class="form-hint">JPG or PNG only, max 2 MB.</span>
                             @error('profile_photo')<span class="form-error">{{ $message }}</span>@enderror
                         </div>
                         <div class="form-field">

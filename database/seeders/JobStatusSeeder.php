@@ -24,13 +24,14 @@ class JobStatusSeeder extends Seeder
             'Round 1',
             'Round 2',
             'Additional Round',
-            'Client Decision',
+            'Client Decision Awaited',
             'Client Confirmation Recieved',
             'Offer Extended to Candidate',
             'Background Check',
             'Candidate Project Start',
-            'Candidate Placement Confirmed',
+            'Candidate Placement Completed',
             'Candidate Placement Rejected',
+            'Unserved',
         ];
 
         foreach ($statuses as $status) {

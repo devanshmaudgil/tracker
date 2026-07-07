@@ -13,8 +13,9 @@ class RegionSeeder extends Seeder
      */
     public function run(): void
     {
-        $regions = [
-            // Canadian Provinces and Territories
+        $countries = ['India', 'Canada', 'USA'];
+
+        $canadianProvinces = [
             'Alberta',
             'British Columbia',
             'Manitoba',
@@ -28,8 +29,9 @@ class RegionSeeder extends Seeder
             'Quebec',
             'Saskatchewan',
             'Yukon',
-            
-            // US States
+        ];
+
+        $usStates = [
             'Alabama',
             'Alaska',
             'Arizona',
@@ -82,11 +84,51 @@ class RegionSeeder extends Seeder
             'Wyoming',
         ];
 
-        foreach ($regions as $regionName) {
-            Region::firstOrCreate(
-                ['region' => $regionName, 'city' => null],
-                ['region' => $regionName, 'city' => null]
-            );
+        $indianStates = [
+            'Andhra Pradesh',
+            'Arunachal Pradesh',
+            'Assam',
+            'Bihar',
+            'Chhattisgarh',
+            'Goa',
+            'Gujarat',
+            'Haryana',
+            'Himachal Pradesh',
+            'Jharkhand',
+            'Karnataka',
+            'Kerala',
+            'Madhya Pradesh',
+            'Maharashtra',
+            'Manipur',
+            'Meghalaya',
+            'Mizoram',
+            'Nagaland',
+            'Odisha',
+            'Punjab',
+            'Rajasthan',
+            'Sikkim',
+            'Tamil Nadu',
+            'Telangana',
+            'Tripura',
+            'Uttar Pradesh',
+            'Uttarakhand',
+            'West Bengal',
+            'Andaman and Nicobar Islands',
+            'Chandigarh',
+            'Dadra and Nagar Haveli and Daman and Diu',
+            'Delhi',
+            'Jammu and Kashmir',
+            'Ladakh',
+            'Lakshadweep',
+            'Puducherry',
+        ];
+
+        foreach ($countries as $country) {
+            Region::firstOrCreate(['region' => $country, 'city' => null]);
+        }
+
+        foreach (array_merge($canadianProvinces, $usStates, $indianStates) as $regionName) {
+            Region::firstOrCreate(['region' => $regionName, 'city' => null]);
         }
 
         // Major Cities from Canada
@@ -370,7 +412,79 @@ class RegionSeeder extends Seeder
             ['region' => 'Washington', 'city' => 'Washington DC'],
         ];
 
-        $allCities = array_merge($canadianCities, $usCities);
+        $indianCities = [
+            ['region' => 'Andhra Pradesh', 'city' => 'Visakhapatnam'],
+            ['region' => 'Andhra Pradesh', 'city' => 'Vijayawada'],
+            ['region' => 'Andhra Pradesh', 'city' => 'Guntur'],
+            ['region' => 'Assam', 'city' => 'Guwahati'],
+            ['region' => 'Assam', 'city' => 'Dibrugarh'],
+            ['region' => 'Bihar', 'city' => 'Patna'],
+            ['region' => 'Bihar', 'city' => 'Gaya'],
+            ['region' => 'Chhattisgarh', 'city' => 'Raipur'],
+            ['region' => 'Chhattisgarh', 'city' => 'Bhilai'],
+            ['region' => 'Goa', 'city' => 'Panaji'],
+            ['region' => 'Goa', 'city' => 'Margao'],
+            ['region' => 'Gujarat', 'city' => 'Ahmedabad'],
+            ['region' => 'Gujarat', 'city' => 'Surat'],
+            ['region' => 'Gujarat', 'city' => 'Vadodara'],
+            ['region' => 'Gujarat', 'city' => 'Rajkot'],
+            ['region' => 'Haryana', 'city' => 'Gurugram'],
+            ['region' => 'Haryana', 'city' => 'Faridabad'],
+            ['region' => 'Haryana', 'city' => 'Panipat'],
+            ['region' => 'Himachal Pradesh', 'city' => 'Shimla'],
+            ['region' => 'Himachal Pradesh', 'city' => 'Dharamshala'],
+            ['region' => 'Jharkhand', 'city' => 'Ranchi'],
+            ['region' => 'Jharkhand', 'city' => 'Jamshedpur'],
+            ['region' => 'Karnataka', 'city' => 'Bengaluru'],
+            ['region' => 'Karnataka', 'city' => 'Mysuru'],
+            ['region' => 'Karnataka', 'city' => 'Mangaluru'],
+            ['region' => 'Kerala', 'city' => 'Kochi'],
+            ['region' => 'Kerala', 'city' => 'Thiruvananthapuram'],
+            ['region' => 'Kerala', 'city' => 'Kozhikode'],
+            ['region' => 'Madhya Pradesh', 'city' => 'Bhopal'],
+            ['region' => 'Madhya Pradesh', 'city' => 'Indore'],
+            ['region' => 'Madhya Pradesh', 'city' => 'Gwalior'],
+            ['region' => 'Maharashtra', 'city' => 'Mumbai'],
+            ['region' => 'Maharashtra', 'city' => 'Pune'],
+            ['region' => 'Maharashtra', 'city' => 'Nagpur'],
+            ['region' => 'Maharashtra', 'city' => 'Nashik'],
+            ['region' => 'Manipur', 'city' => 'Imphal'],
+            ['region' => 'Meghalaya', 'city' => 'Shillong'],
+            ['region' => 'Mizoram', 'city' => 'Aizawl'],
+            ['region' => 'Nagaland', 'city' => 'Kohima'],
+            ['region' => 'Nagaland', 'city' => 'Dimapur'],
+            ['region' => 'Odisha', 'city' => 'Bhubaneswar'],
+            ['region' => 'Odisha', 'city' => 'Cuttack'],
+            ['region' => 'Punjab', 'city' => 'Ludhiana'],
+            ['region' => 'Punjab', 'city' => 'Amritsar'],
+            ['region' => 'Punjab', 'city' => 'Mohali'],
+            ['region' => 'Rajasthan', 'city' => 'Jaipur'],
+            ['region' => 'Rajasthan', 'city' => 'Jodhpur'],
+            ['region' => 'Rajasthan', 'city' => 'Udaipur'],
+            ['region' => 'Sikkim', 'city' => 'Gangtok'],
+            ['region' => 'Tamil Nadu', 'city' => 'Chennai'],
+            ['region' => 'Tamil Nadu', 'city' => 'Coimbatore'],
+            ['region' => 'Tamil Nadu', 'city' => 'Madurai'],
+            ['region' => 'Telangana', 'city' => 'Hyderabad'],
+            ['region' => 'Telangana', 'city' => 'Warangal'],
+            ['region' => 'Tripura', 'city' => 'Agartala'],
+            ['region' => 'Uttar Pradesh', 'city' => 'Lucknow'],
+            ['region' => 'Uttar Pradesh', 'city' => 'Noida'],
+            ['region' => 'Uttar Pradesh', 'city' => 'Kanpur'],
+            ['region' => 'Uttar Pradesh', 'city' => 'Ghaziabad'],
+            ['region' => 'Uttarakhand', 'city' => 'Dehradun'],
+            ['region' => 'Uttarakhand', 'city' => 'Haridwar'],
+            ['region' => 'West Bengal', 'city' => 'Kolkata'],
+            ['region' => 'West Bengal', 'city' => 'Siliguri'],
+            ['region' => 'Delhi', 'city' => 'New Delhi'],
+            ['region' => 'Chandigarh', 'city' => 'Chandigarh'],
+            ['region' => 'Jammu and Kashmir', 'city' => 'Srinagar'],
+            ['region' => 'Jammu and Kashmir', 'city' => 'Jammu'],
+            ['region' => 'Ladakh', 'city' => 'Leh'],
+            ['region' => 'Puducherry', 'city' => 'Puducherry'],
+        ];
+
+        $allCities = array_merge($canadianCities, $usCities, $indianCities);
 
         foreach ($allCities as $cityData) {
             Region::firstOrCreate(

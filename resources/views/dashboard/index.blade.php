@@ -299,14 +299,21 @@
         </div>
     </div>
 
-    {{-- ── Recent Positions ── --}}
+    {{-- ── Consolidated Data ── --}}
     <div class="dash2-enter dash2-enter-4">
         <div class="dash2-section">
             <div class="dash2-section__head">
-                <span class="dash2-section__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></span>
-                <h2 class="dash2-section__title">Recent Positions</h2>
+                <span class="dash2-section__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg></span>
+                <h2 class="dash2-section__title">Consolidated Data</h2>
             </div>
             <div class="dash2-card" data-accent="teal">
+                <div class="dash2-consolidated-toolbar">
+                    <div class="dash2-consolidated-search">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                        <input type="text" id="consolidatedSearch" placeholder="Search positions, clients, recruiters..." value="{{ $activeFilters['search'] }}">
+                    </div>
+                    <span class="dash2-consolidated-count" id="consolidatedCountText"></span>
+                </div>
                 <div class="dash2-table-wrap">
                     <table class="dash2-table">
                         <thead>
@@ -320,10 +327,11 @@
                                 <th>Status</th>
                             </tr>
                         </thead>
-                        <tbody id="recentPositionsBody"></tbody>
+                        <tbody id="consolidatedPositionsBody"></tbody>
                     </table>
-                    <div class="dash2-empty" id="recentEmpty" hidden>No positions match these filters.</div>
+                    <div class="dash2-empty" id="consolidatedEmpty" hidden>No positions match these filters.</div>
                 </div>
+                <div class="dash2-consolidated-pagination" id="consolidatedPagination"></div>
             </div>
         </div>
     </div>
@@ -354,6 +362,7 @@
 <script>
     window.DASHBOARD_PAYLOAD = @json($payload);
     window.DASHBOARD_DATA_URL = @json(route('dashboard.data'));
+    window.DASHBOARD_POSITIONS_URL = @json(route('dashboard.positions'));
     window.DASHBOARD_KPI_URL = @json(url('/dashboard/kpi'));
     window.DASHBOARD_EXPORT_URL = @json(route('dashboard.export'));
 </script>

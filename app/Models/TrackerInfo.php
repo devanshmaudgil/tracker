@@ -17,13 +17,20 @@ class TrackerInfo extends Model
         'country',
         'position',
         'job_description',
+        'notes',
         'type_of_job',
         'bill_rate_salary_range',
         'priority',
         'submission_deadline',
         'lr',
+        'is_unserved',
         'csi',
         'job_status_FK',
+        'remarks',
+    ];
+
+    protected $attributes = [
+        'is_unserved' => false,
     ];
 
     protected function casts(): array
@@ -31,6 +38,7 @@ class TrackerInfo extends Model
         return [
             'prd' => 'date',
             'submission_deadline' => 'date',
+            'is_unserved' => 'boolean',
         ];
     }
 
@@ -47,6 +55,13 @@ class TrackerInfo extends Model
     public function region()
     {
         return $this->belongsTo(Region::class, 'region_id');
+    }
+
+    public function regions()
+    {
+        return $this->belongsToMany(Region::class, 'tracker_info_region', 'tracker_info_id', 'region_id')
+                    ->withPivot('openings_count')
+                    ->withTimestamps();
     }
 
     public function leadRecruiter()
@@ -70,36 +85,66 @@ class TrackerInfo extends Model
         return $this->belongsTo(JobStatus::class, 'job_status_FK');
     }
 
+    public function isUnserved(): bool
+    {
+        return (int) $this->job_status_FK === JobStatus::unservedId();
+    }
+
     public function updateStatusFromCandidates()
     {
-        $candidates = $this->trackerCandidates()->whereNull('rejected_at')->get();
-        $totalCandidates = $candidates->count();
-        
-        if ($totalCandidates == 0) {
-            if ($this->job_status_FK != 1) {
-                $this->update(['job_status_FK' => 1]); // Demand Raised
-            }
+        if ($this->isUnserved()) {
             return;
         }
+        $candidates = $this->trackerCandidates()
+            ->with('pipelineStatus')
+            ->whereNull('rejected_at')
+            ->get();
 
-        $statusCounts = $candidates->groupBy('current_status_id')
-            ->map(function ($group) {
-                return $group->count();
-            });
+        $newStatusId = $this->deriveJobStatusId($candidates);
 
-        $majorityThreshold = $totalCandidates / 2;
-        $newStatusId = null;
-
-        foreach ($statusCounts as $statusId => $count) {
-            if ($count > $majorityThreshold) {
-                $newStatusId = $statusId;
-                break;
-            }
-        }
-
-        // If a status has majority, update the job status
-        if ($newStatusId && $this->job_status_FK != $newStatusId) {
+        if ($this->job_status_FK != $newStatusId) {
             $this->update(['job_status_FK' => $newStatusId]);
         }
+    }
+
+    /**
+     * Derive the single job status from candidate pipelines.
+     *
+     * Priority: any placement wins immediately; otherwise take the furthest
+     * stage reached among non-placed candidates. Falls back to Demand Raised
+     * when there are no active candidates.
+     *
+     * @param  \Illuminate\Support\Collection<int, TrackerCandidate>  $candidates
+     */
+    public function deriveJobStatusId($candidates): int
+    {
+        $placementCompletedId = JobStatus::placementCompletedId();
+
+        if ($candidates->isEmpty()) {
+            return 1; // Demand Raised
+        }
+
+        // Any confirmed placement moves the whole job to Accepted immediately.
+        if ($candidates->contains(fn ($tc) => $tc->isPipelinePlaced())) {
+            return $placementCompletedId;
+        }
+
+        $activeStatuses = $candidates
+            ->map(fn ($tc) => (int) $tc->current_status_id)
+            ->filter(fn ($statusId) => $statusId > 0 && $statusId !== $placementCompletedId);
+
+        if ($activeStatuses->isEmpty()) {
+            return 1; // Demand Raised
+        }
+
+        // All remaining candidates marked as placement rejected.
+        if ($activeStatuses->every(fn ($statusId) => $statusId === 18)) {
+            return 18;
+        }
+
+        // Furthest stage reached, ignoring placement-rejected candidates.
+        return (int) $activeStatuses
+            ->reject(fn ($statusId) => $statusId === 18)
+            ->max();
     }
 }

@@ -7,16 +7,30 @@
 <div class="dashboard-page">
 <div class="dash-enter dash-enter-1">
 <div class="dashboard-toolbar">
+    <div class="year-picker" id="yearPicker">
+        <label class="month-picker-label" for="toolbarYear">Year</label>
+        <div class="year-picker-field">
+            <select id="toolbarYear" class="year-picker-select">
+                @foreach($years as $year)
+                    <option value="{{ $year }}" @selected($selectedYear == $year)>{{ $year }}</option>
+                @endforeach
+            </select>
+            <svg class="year-picker-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+        </div>
+    </div>
+
     <div class="month-picker" id="monthPicker">
-        <label class="month-picker-label">Select Month</label>
+        <label class="month-picker-label">Month</label>
         <div class="month-picker-field">
             <svg class="month-picker-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-            <input type="text" id="monthSearchInput" class="month-picker-input" placeholder="Search month..." value="{{ $selectedMonth->month ?? '' }}" autocomplete="off">
-            <input type="hidden" id="toolbarMonthId" value="{{ $selectedMonthId }}">
+            <input type="text" id="monthSearchInput" class="month-picker-input" placeholder="All months" value="{{ $selectedMonth->month ?? '' }}" autocomplete="off">
+            <input type="hidden" id="toolbarMonthId" value="{{ $selectedMonthId ?? 'all' }}">
             <svg class="month-picker-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
             <div class="month-picker-dropdown" id="monthPickerDropdown">
-                @foreach($months as $month)
-                    <button type="button" class="month-picker-option {{ $selectedMonthId == $month->id ? 'selected' : '' }}" data-id="{{ $month->id }}" data-label="{{ $month->month }}">{{ $month->month }}</button>
+                <button type="button" class="month-picker-option month-picker-option--all {{ empty($selectedMonthId) ? 'selected' : '' }}" data-id="all" data-label="All months" data-year="">All months</button>
+                @foreach($allMonths as $month)
+                    @php $monthYear = \Illuminate\Support\Str::afterLast($month->month, ' '); @endphp
+                    <button type="button" class="month-picker-option {{ $selectedMonthId == $month->id ? 'selected' : '' }} {{ $monthYear !== $selectedYear ? 'hidden' : '' }}" data-id="{{ $month->id }}" data-label="{{ $month->month }}" data-year="{{ $monthYear }}">{{ $month->month }}</button>
                 @endforeach
             </div>
         </div>
@@ -44,7 +58,7 @@
             </span>
             <span class="toolbar-btn__label">Export</span>
         </button>
-        <a href="{{ route('tracker.create') }}" class="toolbar-btn toolbar-btn--primary">
+        <a href="{{ route('tracker.create') }}" class="toolbar-btn toolbar-btn--primary" title="Add New Position">
             <span class="toolbar-btn__icon">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
             </span>
@@ -142,6 +156,7 @@
         text-decoration: none;
         transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease, color 0.2s ease;
         white-space: nowrap;
+        flex-shrink: 0;
     }
 
     .toolbar-btn__icon {
@@ -233,6 +248,53 @@
     }
 
     .toolbar-spacer { flex: 1; min-width: 12px; }
+
+    .year-picker {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        min-width: 120px;
+        position: relative;
+        z-index: 1;
+    }
+
+    .year-picker-field {
+        position: relative;
+        display: flex;
+        align-items: center;
+    }
+
+    .year-picker-select {
+        width: 100%;
+        appearance: none;
+        -webkit-appearance: none;
+        padding: 10px 36px 10px 14px;
+        border: 1px solid rgba(13, 148, 136, 0.22);
+        border-radius: 10px;
+        background: #fff;
+        font-size: 14px;
+        font-weight: 500;
+        color: #0f172a;
+        cursor: pointer;
+        transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .year-picker-select:hover,
+    .year-picker-select:focus {
+        outline: none;
+        border-color: var(--dash-teal);
+        box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.12);
+    }
+
+    .year-picker-chevron {
+        position: absolute;
+        right: 12px;
+        width: 16px;
+        height: 16px;
+        color: var(--dash-teal);
+        opacity: 0.55;
+        pointer-events: none;
+    }
 
     .month-picker {
         display: flex;
@@ -352,6 +414,14 @@
     }
 
     .month-picker-option.hidden { display: none; }
+
+    .month-picker-option--all {
+        font-weight: 600;
+        color: var(--dash-teal);
+        border-bottom: 1px solid rgba(13, 148, 136, 0.12);
+        margin-bottom: 4px;
+        padding-bottom: 10px;
+    }
 
     .toolbar-divider {
         width: 1px;
@@ -498,6 +568,29 @@
         font-weight: 500;
         color: #2a3a37;
     }
+
+    .loc-extra {
+        display: inline-block;
+        margin-left: 6px;
+        padding: 1px 7px;
+        border-radius: 999px;
+        background: rgba(241, 205, 134, 0.25);
+        color: var(--dash-teal);
+        font-size: 11px;
+        font-weight: 700;
+        cursor: default;
+    }
+
+    .cand-mix {
+        display: block;
+        margin-top: 3px;
+        font-size: 11px;
+        font-weight: 600;
+        color: #6b7280;
+    }
+    .cand-mix__placed { color: #059669; }
+    .cand-mix__active { color: #2563eb; }
+    .cand-mix__dot { margin: 0 4px; color: #9ca3af; }
 
     .status-badge {
         display: inline-flex;
@@ -780,69 +873,209 @@
         background: #f9f9f9;
     }
 
-    /* Tabs */
-    .tabs-bar {
-        background: var(--dash-teal);
-        padding: 8px 10px;
-        display: flex;
-        gap: 4px;
-        margin-bottom: 0;
-        overflow-x: auto;
-        scrollbar-width: none;
+    /* Pipeline stage tabs */
+    .workspace-tabs-panel {
+        background: #fff;
+        padding: 0;
     }
 
-    .tabs-bar::-webkit-scrollbar { display: none; }
+    .workspace-tabs-nav {
+        display: flex;
+        align-items: flex-end;
+        gap: 3px;
+        padding: 8px 10px 0;
+        overflow: hidden;
+        background: linear-gradient(180deg, #e8eeec 0%, #dfe8e5 100%);
+        border-bottom: 2px solid #cfd9d6;
+    }
 
     .tab-item {
-        display: flex;
+        display: inline-flex;
         align-items: center;
         justify-content: center;
-        gap: 7px;
-        padding: 9px 14px;
-        color: rgba(255, 255, 255, 0.7);
+        gap: 4px;
+        flex: 1 1 0;
+        min-width: 0;
+        padding: 7px 5px 9px;
+        margin-bottom: -2px;
+        color: #4d615d;
         cursor: pointer;
-        border-radius: 10px;
-        transition: all 0.25s;
+        border-radius: 10px 10px 0 0;
+        transition: transform 0.2s ease, background 0.2s ease, color 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
         white-space: nowrap;
-        font-size: 12px;
-        font-weight: 500;
-        background: transparent;
-        border: none;
+        font-size: 10.5px;
+        font-weight: 600;
+        background: rgba(255, 255, 255, 0.45);
+        border: 1px solid rgba(10, 45, 41, 0.08);
+        border-bottom: none;
         font-family: inherit;
+        position: relative;
+        z-index: 1;
+        min-height: 36px;
+        box-shadow: inset 0 -2px 0 rgba(10, 45, 41, 0.04);
     }
 
-    .tab-item:hover {
-        background: rgba(255, 255, 255, 0.08);
-        color: #fff;
+    .tab-item:hover:not(.active):not(.is-loading) {
+        background: rgba(255, 255, 255, 0.82);
+        color: var(--dash-teal);
+        transform: translateY(-1px);
+        box-shadow: 0 3px 10px rgba(10, 45, 41, 0.08);
     }
 
     .tab-item.active {
-        background: var(--dash-gold);
-        color: var(--dash-teal);
+        background: linear-gradient(135deg, var(--dash-teal) 0%, #0f3d38 100%);
+        color: #fff;
         font-weight: 700;
-        box-shadow: 0 2px 12px rgba(241, 205, 134, 0.3);
+        border-color: var(--dash-teal);
+        border-bottom-color: var(--dash-teal);
+        box-shadow: 0 -3px 12px rgba(10, 45, 41, 0.22);
+        z-index: 3;
+        transform: translateY(-1px);
+        padding-bottom: 11px;
     }
 
-    .tab-icon { width: 15px; height: 15px; flex-shrink: 0; }
-
-    .tab-badge {
-        font-size: 10px;
-        font-weight: 700;
-        padding: 2px 7px;
-        border-radius: 10px;
-        min-width: 20px;
-        text-align: center;
+    .tab-item.active::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 8px;
+        right: 8px;
+        height: 3px;
+        border-radius: 0 0 3px 3px;
+        background: linear-gradient(90deg, var(--dash-gold) 0%, #ffe4a8 50%, var(--dash-gold) 100%);
     }
 
-    .tab-item.active .tab-badge {
-        background: var(--dash-teal);
+    .tab-icon-wrap {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 20px;
+        height: 20px;
+        border-radius: 6px;
+        background: rgba(10, 45, 41, 0.06);
+        flex-shrink: 0;
+        transition: background 0.2s ease;
+    }
+
+    .tab-item.active .tab-icon-wrap {
+        background: rgba(255, 255, 255, 0.16);
+    }
+
+    .tab-icon {
+        width: 12px;
+        height: 12px;
+        flex-shrink: 0;
+        opacity: 0.8;
+    }
+
+    .tab-item.active .tab-icon {
+        opacity: 1;
         color: #fff;
     }
 
+    .tab-label {
+        line-height: 1.1;
+        letter-spacing: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        font-size: 10.5px;
+    }
+
+    .tab-badge {
+        font-size: 9px;
+        font-weight: 800;
+        padding: 2px 5px;
+        border-radius: 999px;
+        min-width: 18px;
+        text-align: center;
+        line-height: 1;
+        border: 1px solid transparent;
+        flex-shrink: 0;
+    }
+
+    .tab-item.active .tab-badge {
+        background: var(--dash-gold);
+        color: var(--dash-teal);
+        border-color: var(--dash-gold);
+    }
+
     .tab-item:not(.active) .tab-badge {
-        background: rgba(241, 205, 134, 0.15);
-        color: var(--dash-gold);
-        border: 1px solid rgba(241, 205, 134, 0.25);
+        background: #fff;
+        color: #5f726e;
+        border-color: #d5dfdc;
+    }
+
+    .tab-item--unserved:not(.active) {
+        background: rgba(255, 247, 237, 0.75);
+        border-color: rgba(249, 115, 22, 0.15);
+        color: #9a3412;
+    }
+
+    .tab-item--unserved.active {
+        background: linear-gradient(135deg, #ea580c 0%, #c2410c 100%);
+        color: #fff;
+        border-color: #ea580c;
+        border-bottom-color: #ea580c;
+    }
+
+    .tab-item--unserved.active::before {
+        background: linear-gradient(90deg, #fdba74 0%, #fb923c 50%, #fdba74 100%);
+    }
+
+    .tab-item--unserved.active .tab-badge {
+        background: #fff;
+        color: #c2410c;
+        border-color: #fff;
+    }
+
+    .tab-item.is-loading {
+        opacity: 0.7;
+        pointer-events: none;
+    }
+
+    @media (max-width: 1100px) {
+        .tab-icon-wrap { display: none; }
+        .tab-item { gap: 3px; padding: 7px 4px 9px; }
+        .tab-label { font-size: 10px; }
+    }
+
+    @media (max-width: 768px) {
+        .workspace-tabs-nav {
+            flex-wrap: wrap;
+            gap: 4px;
+            padding: 8px 8px 0;
+        }
+
+        .tab-item {
+            flex: 1 1 calc(33.333% - 4px);
+            min-width: calc(33.333% - 4px);
+            font-size: 10px;
+        }
+    }
+
+    .action-remarks:hover,
+    .action-remarks.has-remarks {
+        background: rgba(99, 102, 241, 0.1);
+        border-color: rgba(99, 102, 241, 0.25);
+        color: #4f46e5;
+    }
+
+    .remarks-modal textarea {
+        width: 100%;
+        min-height: 140px;
+        padding: 12px;
+        border: 1px solid #dfe8e5;
+        border-radius: 8px;
+        font-family: inherit;
+        font-size: 13px;
+        resize: vertical;
+    }
+
+    .remarks-modal .modal-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+        margin-top: 16px;
     }
 
     .header-controls {
@@ -932,6 +1165,270 @@
     }
 
     .attention-pill--urgent strong { color: var(--dash-teal); }
+
+    .attention-pill--clickable {
+        cursor: pointer;
+        font-family: inherit;
+        transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+    }
+
+    .attention-pill--clickable:hover:not(.attention-pill--muted) {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(10, 45, 41, 0.08);
+    }
+
+    .attention-pill--clickable:focus-visible {
+        outline: 2px solid var(--dash-gold);
+        outline-offset: 2px;
+    }
+
+    .attention-modal {
+        position: fixed;
+        inset: 0;
+        z-index: 1003;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 24px;
+        opacity: 0;
+        visibility: hidden;
+        pointer-events: none;
+        transition: opacity 0.28s ease, visibility 0.28s ease;
+    }
+
+    .attention-modal.is-open {
+        opacity: 1;
+        visibility: visible;
+        pointer-events: auto;
+    }
+
+    .attention-modal__backdrop {
+        position: absolute;
+        inset: 0;
+        background: rgba(10, 45, 41, 0.45);
+        backdrop-filter: blur(4px);
+        opacity: 0;
+        transition: opacity 0.28s ease;
+    }
+
+    .attention-modal.is-open .attention-modal__backdrop {
+        opacity: 1;
+    }
+
+    .attention-modal__panel {
+        position: relative;
+        z-index: 1;
+        width: min(760px, 100%);
+        max-height: min(82vh, 720px);
+        background: #fff;
+        border-radius: 18px;
+        box-shadow: 0 24px 64px rgba(10, 45, 41, 0.22);
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        transform: translateY(18px) scale(0.98);
+        opacity: 0;
+        transition: transform 0.32s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.28s ease;
+    }
+
+    .attention-modal.is-open .attention-modal__panel {
+        transform: none;
+        opacity: 1;
+    }
+
+    .attention-modal__head {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 16px;
+        padding: 20px 24px;
+        background: linear-gradient(135deg, var(--dash-teal) 0%, #0d3a33 100%);
+        color: #fff;
+    }
+
+    .attention-modal__head h2 {
+        margin: 0 0 4px;
+        font-size: 18px;
+        font-weight: 700;
+        color: #fff;
+    }
+
+    .attention-modal__head p {
+        margin: 0;
+        font-size: 13px;
+        opacity: 0.85;
+    }
+
+    .attention-modal__close {
+        background: rgba(255, 255, 255, 0.12);
+        border: none;
+        color: #fff;
+        width: 36px;
+        height: 36px;
+        border-radius: 10px;
+        font-size: 22px;
+        cursor: pointer;
+        line-height: 1;
+        flex-shrink: 0;
+        transition: background 0.15s ease;
+    }
+
+    .attention-modal__close:hover {
+        background: rgba(255, 255, 255, 0.22);
+    }
+
+    .attention-modal__body {
+        padding: 0;
+        overflow-y: auto;
+        flex: 1;
+        background: #fafcfb;
+    }
+
+    .attention-modal__loading,
+    .attention-modal__empty {
+        padding: 48px 24px;
+        text-align: center;
+        color: #7a8e8a;
+        font-size: 14px;
+    }
+
+    .attention-card-list {
+        list-style: none;
+        margin: 0;
+        padding: 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .attention-card {
+        background: #fff;
+        border: 1px solid #e2ebe9;
+        border-radius: 14px;
+        padding: 16px 18px;
+        box-shadow: 0 2px 8px rgba(10, 45, 41, 0.04);
+        transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .attention-card:hover {
+        border-color: rgba(241, 205, 134, 0.55);
+        box-shadow: 0 6px 18px rgba(10, 45, 41, 0.08);
+    }
+
+    .attention-card__top {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 8px;
+    }
+
+    .attention-card__title {
+        margin: 0;
+        font-size: 15px;
+        font-weight: 700;
+        color: var(--dash-teal);
+        line-height: 1.35;
+    }
+
+    .attention-card__title a {
+        color: inherit;
+        text-decoration: none;
+    }
+
+    .attention-card__title a:hover {
+        text-decoration: underline;
+    }
+
+    .attention-card__id {
+        font-size: 11px;
+        font-weight: 700;
+        color: #7a8e8a;
+        white-space: nowrap;
+    }
+
+    .attention-card__meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px 14px;
+        font-size: 12px;
+        color: #5a6e6a;
+        margin-bottom: 10px;
+    }
+
+    .attention-card__meta strong {
+        color: #374151;
+        font-weight: 600;
+    }
+
+    .attention-card__detail {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 5px 10px;
+        border-radius: 999px;
+        font-size: 11px;
+        font-weight: 700;
+        margin-bottom: 10px;
+        background: rgba(241, 205, 134, 0.15);
+        color: #8a6d1f;
+        border: 1px solid rgba(241, 205, 134, 0.35);
+    }
+
+    .attention-card--overdue .attention-card__detail {
+        background: rgba(180, 35, 24, 0.08);
+        color: #b42318;
+        border-color: rgba(180, 35, 24, 0.18);
+    }
+
+    .attention-card--due_soon .attention-card__detail {
+        background: rgba(181, 71, 8, 0.08);
+        color: #b54708;
+        border-color: rgba(181, 71, 8, 0.18);
+    }
+
+    .attention-card__desc {
+        margin: 0;
+        font-size: 13px;
+        line-height: 1.55;
+        color: #4b5c58;
+        white-space: pre-wrap;
+    }
+
+    .attention-card__actions {
+        display: flex;
+        justify-content: flex-end;
+        margin-top: 12px;
+    }
+
+    .attention-card__link {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 7px 14px;
+        border-radius: 999px;
+        font-size: 12px;
+        font-weight: 700;
+        text-decoration: none;
+        color: var(--dash-teal);
+        background: rgba(10, 45, 41, 0.06);
+        border: 1px solid rgba(10, 45, 41, 0.1);
+        transition: background 0.2s ease, transform 0.2s ease;
+    }
+
+    .attention-card__link:hover {
+        background: rgba(241, 205, 134, 0.2);
+        transform: translateY(-1px);
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .attention-modal,
+        .attention-modal__backdrop,
+        .attention-modal__panel,
+        .attention-pill--clickable {
+            transition: none;
+        }
+    }
 
     .attention-strip__clear {
         display: inline-flex;
@@ -1068,11 +1565,6 @@
         to { transform: rotate(360deg); }
     }
 
-    .tab-item.is-loading {
-        pointer-events: none;
-        opacity: 0.75;
-    }
-
     @media (max-width: 768px) {
         .dashboard-toolbar {
             flex-direction: column;
@@ -1172,47 +1664,53 @@
     </div>
 </div>
 
-<!-- Tabs Bar -->
-<div class="tabs-bar" id="tabsContainer">
-    <div class="tab-item {{ request('tab', 'demand_raised') == 'demand_raised' ? 'active' : '' }}" data-tab="demand_raised">
-        <svg class="tab-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>
-        <span>Demand Raised</span>
+<!-- Tabs -->
+<div class="workspace-tabs-panel">
+    <div class="workspace-tabs-nav" id="tabsContainer" role="tablist" aria-label="Pipeline stages">
+    <div class="tab-item {{ request('tab', 'demand_raised') == 'demand_raised' ? 'active' : '' }}" data-tab="demand_raised" role="tab" aria-selected="{{ request('tab', 'demand_raised') == 'demand_raised' ? 'true' : 'false' }}" title="Demand Raised">
+        <span class="tab-icon-wrap"><svg class="tab-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg></span>
+        <span class="tab-label">Demand</span>
         <span class="tab-badge">{{ $counts['demand_raised'] ?? 0 }}</span>
     </div>
-    <div class="tab-item {{ request('tab') == 'identified' ? 'active' : '' }}" data-tab="identified">
-        <svg class="tab-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
-        <span>Identified</span>
+    <div class="tab-item {{ request('tab') == 'identified' ? 'active' : '' }}" data-tab="identified" role="tab" aria-selected="{{ request('tab') == 'identified' ? 'true' : 'false' }}">
+        <span class="tab-icon-wrap"><svg class="tab-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg></span>
+        <span class="tab-label">Identified</span>
         <span class="tab-badge">{{ $counts['identified'] ?? 0 }}</span>
     </div>
-    <div class="tab-item {{ request('tab') == 'screening' ? 'active' : '' }}" data-tab="screening">
-        <svg class="tab-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" /></svg>
-        <span>Initial Screening</span>
+    <div class="tab-item {{ request('tab') == 'screening' ? 'active' : '' }}" data-tab="screening" role="tab" aria-selected="{{ request('tab') == 'screening' ? 'true' : 'false' }}" title="Initial Screening">
+        <span class="tab-icon-wrap"><svg class="tab-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" /></svg></span>
+        <span class="tab-label">Screening</span>
         <span class="tab-badge">{{ $counts['screening'] ?? 0 }}</span>
     </div>
-    <div class="tab-item {{ request('tab') == 'submission' ? 'active' : '' }}" data-tab="submission">
-        <svg class="tab-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" /></svg>
-        <span>Submission</span>
+    <div class="tab-item {{ request('tab') == 'submission' ? 'active' : '' }}" data-tab="submission" role="tab" aria-selected="{{ request('tab') == 'submission' ? 'true' : 'false' }}">
+        <span class="tab-icon-wrap"><svg class="tab-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" /></svg></span>
+        <span class="tab-label">Submission</span>
         <span class="tab-badge">{{ $counts['submission'] ?? 0 }}</span>
     </div>
-    <div class="tab-item {{ request('tab') == 'interview' ? 'active' : '' }}" data-tab="interview">
-        <svg class="tab-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
-        <span>Interview</span>
+    <div class="tab-item {{ request('tab') == 'interview' ? 'active' : '' }}" data-tab="interview" role="tab" aria-selected="{{ request('tab') == 'interview' ? 'true' : 'false' }}">
+        <span class="tab-icon-wrap"><svg class="tab-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg></span>
+        <span class="tab-label">Interview</span>
         <span class="tab-badge">{{ $counts['interview'] ?? 0 }}</span>
     </div>
-    <div class="tab-item {{ request('tab') == 'decision' ? 'active' : '' }}" data-tab="decision">
-        <svg class="tab-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3" /></svg>
-        <span>Decision</span>
+    <div class="tab-item {{ request('tab') == 'decision' ? 'active' : '' }}" data-tab="decision" role="tab" aria-selected="{{ request('tab') == 'decision' ? 'true' : 'false' }}">
+        <span class="tab-icon-wrap"><svg class="tab-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3" /></svg></span>
+        <span class="tab-label">Decision</span>
         <span class="tab-badge">{{ $counts['decision'] ?? 0 }}</span>
     </div>
-    <div class="tab-item {{ request('tab') == 'accepted' ? 'active' : '' }}" data-tab="accepted">
-        <svg class="tab-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-        <span>Accepted</span>
+    <div class="tab-item {{ request('tab') == 'accepted' ? 'active' : '' }}" data-tab="accepted" role="tab" aria-selected="{{ request('tab') == 'accepted' ? 'true' : 'false' }}">
+        <span class="tab-icon-wrap"><svg class="tab-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg></span>
+        <span class="tab-label">Accepted</span>
         <span class="tab-badge">{{ $counts['accepted'] ?? 0 }}</span>
     </div>
-    <div class="tab-item {{ request('tab') == 'rejected' ? 'active' : '' }}" data-tab="rejected">
-        <svg class="tab-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-        <span>Rejected</span>
+    <div class="tab-item {{ request('tab') == 'rejected' ? 'active' : '' }}" data-tab="rejected" role="tab" aria-selected="{{ request('tab') == 'rejected' ? 'true' : 'false' }}">
+        <span class="tab-icon-wrap"><svg class="tab-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg></span>
+        <span class="tab-label">Rejected</span>
         <span class="tab-badge">{{ $counts['rejected'] ?? 0 }}</span>
+    </div>
+    <div class="tab-item tab-item--unserved {{ request('tab') == 'unserved' ? 'active' : '' }}" data-tab="unserved" role="tab" aria-selected="{{ request('tab') == 'unserved' ? 'true' : 'false' }}">
+        <span class="tab-icon-wrap"><svg class="tab-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg></span>
+        <span class="tab-label">Unserved</span>
+        <span class="tab-badge">{{ $counts['unserved'] ?? 0 }}</span>
     </div>
 </div>
 
@@ -1232,9 +1730,9 @@
                 <th>Month</th>
                 <th>Receiving Date</th>
                 <th>Target Date</th>
-                <th>Client</th>
+                <th>Position Name</th>
                 <th>Location</th>
-                <th>Position</th>
+                <th>Client</th>
                 <th>Recruiter</th>
                 <th>Status</th>
                 <th>Actions</th>
@@ -1264,9 +1762,39 @@
         @endif
     </div>
 </div>
+    </div>
 </div>
 </div>
 </div>
+
+<!-- Attention Modal -->
+<div class="attention-modal" id="attentionModal" aria-hidden="true">
+    <div class="attention-modal__backdrop" data-close-attention></div>
+    <div class="attention-modal__panel" role="dialog" aria-labelledby="attentionModalTitle" aria-modal="true">
+        <div class="attention-modal__head">
+            <div>
+                <h2 id="attentionModalTitle">Needs Attention</h2>
+                <p id="attentionModalSubtitle"></p>
+            </div>
+            <button type="button" class="attention-modal__close" data-close-attention aria-label="Close">&times;</button>
+        </div>
+        <div class="attention-modal__body" id="attentionModalBody">
+            <div class="attention-modal__loading" id="attentionModalLoading">Loading...</div>
+        </div>
+    </div>
+</div>
+
+<!-- Remarks Modal -->
+<div id="remarksModal" class="modal remarks-modal" style="display: none; position: fixed; z-index: 1002; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.4);">
+    <div class="modal-content" style="background-color: #fefefe; margin: 12% auto; padding: 20px; border: 1px solid #dfe8e5; width: min(480px, 92vw); border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.12);">
+        <h2 id="remarksModalTitle" style="font-size: 18px; margin: 0 0 6px; color: #0a2d29;">Remarks</h2>
+        <p id="remarksModalSubtitle" style="font-size: 12px; color: #6b7280; margin: 0 0 14px;"></p>
+        <textarea id="remarksTextarea" placeholder="Add remarks for this position..."></textarea>
+        <div class="modal-actions">
+            <button type="button" class="btn btn-secondary" onclick="closeRemarksModal()" style="padding: 8px 16px; font-size: 12px;">Cancel</button>
+            <button type="button" class="btn btn-primary" id="remarksSaveBtn" style="padding: 8px 16px; font-size: 12px;">Save Remarks</button>
+        </div>
+    </div>
 </div>
 
 <!-- Export Modal -->
@@ -1310,10 +1838,15 @@
         const monthPicker = document.getElementById('monthPicker');
         const monthSearchInput = document.getElementById('monthSearchInput');
         const toolbarMonthId = document.getElementById('toolbarMonthId');
+        const toolbarYear = document.getElementById('toolbarYear');
         const monthPickerDropdown = document.getElementById('monthPickerDropdown');
         const monthOptions = document.querySelectorAll('.month-picker-option');
         const totalRequisitionEl = document.getElementById('totalRequisition');
         const attentionStripContainer = document.getElementById('attentionStripContainer');
+        const attentionModal = document.getElementById('attentionModal');
+        const attentionModalTitle = document.getElementById('attentionModalTitle');
+        const attentionModalSubtitle = document.getElementById('attentionModalSubtitle');
+        const attentionModalBody = document.getElementById('attentionModalBody');
         const activeTabEl = document.querySelector('.tab-item.active');
         let currentTab = activeTabEl ? activeTabEl.dataset.tab : 'demand_raised';
         let debounceTimer;
@@ -1321,30 +1854,34 @@
 
         function filterMonthOptions(query) {
             const q = query.trim().toLowerCase();
+            const year = toolbarYear ? toolbarYear.value : '';
             monthOptions.forEach(opt => {
                 const label = (opt.dataset.label || opt.textContent).toLowerCase();
-                opt.classList.toggle('hidden', q !== '' && !label.includes(q));
+                const matchesYear = opt.classList.contains('month-picker-option--all') || opt.dataset.year === year;
+                const matchesSearch = q === '' || label.includes(q);
+                opt.classList.toggle('hidden', !matchesYear || !matchesSearch);
+            });
+        }
+
+        function syncMonthOptionsForYear() {
+            const year = toolbarYear ? toolbarYear.value : '';
+            monthOptions.forEach(opt => {
+                if (opt.classList.contains('month-picker-option--all')) {
+                    return;
+                }
+                opt.classList.toggle('hidden', opt.dataset.year !== year);
+            });
+        }
+
+        function clearMonthSelection() {
+            toolbarMonthId.value = 'all';
+            monthSearchInput.value = '';
+            monthOptions.forEach(opt => {
+                opt.classList.toggle('selected', opt.classList.contains('month-picker-option--all'));
             });
         }
 
         let monthDropdownAnchor = null;
-
-        function ensureDefaultMonthSelected() {
-            if (toolbarMonthId.value) {
-                return;
-            }
-
-            const latestOption = monthOptions[0];
-            if (!latestOption) {
-                return;
-            }
-
-            toolbarMonthId.value = latestOption.dataset.id;
-            monthSearchInput.value = latestOption.dataset.label;
-            monthOptions.forEach(opt => {
-                opt.classList.toggle('selected', opt === latestOption);
-            });
-        }
 
         function positionMonthDropdown() {
             if (!monthPicker.classList.contains('open') || !monthSearchInput) return;
@@ -1382,16 +1919,24 @@
         }
 
         function selectMonth(id, label) {
-            toolbarMonthId.value = id;
-            monthSearchInput.value = label;
+            const monthId = id ? String(id) : 'all';
+            toolbarMonthId.value = monthId;
+            monthSearchInput.value = monthId === 'all' ? '' : label;
             monthOptions.forEach(opt => {
-                opt.classList.toggle('selected', opt.dataset.id === String(id));
+                const optId = opt.dataset.id || 'all';
+                opt.classList.toggle('selected', optId === monthId);
             });
             closeMonthPicker();
             fetchData('{{ route('tracker.index') }}', getParams(), { loading: true });
         }
 
-        ensureDefaultMonthSelected();
+        if (toolbarYear) {
+            toolbarYear.addEventListener('change', () => {
+                clearMonthSelection();
+                syncMonthOptionsForYear();
+                fetchData('{{ route('tracker.index') }}', getParams(), { loading: true });
+            });
+        }
 
         if (monthPicker && monthSearchInput) {
             monthSearchInput.addEventListener('focus', () => {
@@ -1413,9 +1958,13 @@
             document.addEventListener('click', (e) => {
                 if (!isMonthPickerTarget(e.target)) {
                     closeMonthPicker();
-                    const selected = document.querySelector('.month-picker-option.selected');
-                    if (selected) {
-                        monthSearchInput.value = selected.dataset.label;
+                    if (toolbarMonthId.value) {
+                        const selected = document.querySelector('.month-picker-option.selected');
+                        if (selected) {
+                            monthSearchInput.value = selected.dataset.label;
+                        }
+                    } else {
+                        monthSearchInput.value = '';
                     }
                 }
             });
@@ -1452,7 +2001,9 @@
         function fetchData(url, params = {}, options = {}) {
             const fetchUrl = new URL(url, window.location.origin);
             Object.keys(params).forEach(key => {
-                if (params[key]) fetchUrl.searchParams.set(key, params[key]);
+                if (key === 'month_id' || params[key]) {
+                    fetchUrl.searchParams.set(key, params[key]);
+                }
             });
 
             const showLoading = options.loading === true;
@@ -1524,6 +2075,7 @@
         function getParams() {
             return {
                 search: searchInput.value,
+                year: toolbarYear ? toolbarYear.value : '',
                 month_id: toolbarMonthId.value,
                 client_id: document.getElementById('client_id').value,
                 lead_recruiter_id: document.getElementById('lead_recruiter_id').value,
@@ -1535,7 +2087,7 @@
         window.openExportModal = function() {
             const modal = document.getElementById('exportModal');
             const currentMonthId = toolbarMonthId.value;
-            if (currentMonthId) {
+            if (currentMonthId && currentMonthId !== 'all') {
                 document.getElementById('export_month_id').value = currentMonthId;
             }
             modal.style.display = 'block';
@@ -1553,12 +2105,157 @@
             }
         });
 
+        // Remarks modal
+        const remarksModal = document.getElementById('remarksModal');
+        const remarksTextarea = document.getElementById('remarksTextarea');
+        const remarksSaveBtn = document.getElementById('remarksSaveBtn');
+        let activeRemarksId = null;
+
+        window.closeRemarksModal = function() {
+            if (remarksModal) remarksModal.style.display = 'none';
+            activeRemarksId = null;
+        };
+
+        document.addEventListener('click', function(e) {
+            const btn = e.target.closest('[data-remarks-btn]');
+            if (btn) {
+                activeRemarksId = btn.dataset.id;
+                document.getElementById('remarksModalSubtitle').textContent = '#' + btn.dataset.id + ' — ' + btn.dataset.position;
+                remarksTextarea.value = btn.dataset.remarks || '';
+                remarksModal.style.display = 'block';
+                remarksTextarea.focus();
+                return;
+            }
+            if (e.target === remarksModal) {
+                closeRemarksModal();
+            }
+        });
+
+        if (remarksSaveBtn) {
+            remarksSaveBtn.addEventListener('click', function() {
+                if (!activeRemarksId) return;
+                remarksSaveBtn.disabled = true;
+                fetch('/tracker/info/' + activeRemarksId + '/remarks', {
+                    method: 'PATCH',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'Accept': 'application/json',
+                    },
+                    body: JSON.stringify({ remarks: remarksTextarea.value }),
+                })
+                .then(res => res.json())
+                .then(() => {
+                    closeRemarksModal();
+                    fetchData('{{ route('tracker.index') }}', getParams(), { loading: false });
+                })
+                .finally(() => { remarksSaveBtn.disabled = false; });
+            });
+        }
+
+        // Attention modal
+        function escapeHtml(str) {
+            return String(str == null ? '' : str).replace(/[&<>"']/g, function (m) {
+                return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m];
+            });
+        }
+
+        function closeAttentionModal() {
+            if (!attentionModal) return;
+            attentionModal.classList.remove('is-open');
+            attentionModal.setAttribute('aria-hidden', 'true');
+            document.body.style.overflow = '';
+        }
+
+        function renderAttentionItems(data) {
+            if (!data.items || !data.items.length) {
+                attentionModalBody.innerHTML = '<div class="attention-modal__empty">No matching demands for the current filters.</div>';
+                return;
+            }
+
+            attentionModalBody.innerHTML = '<ul class="attention-card-list">' + data.items.map(function (item) {
+                return '<li class="attention-card attention-card--' + escapeHtml(data.type) + '">'
+                    + '<div class="attention-card__top">'
+                    + '<h3 class="attention-card__title"><a href="' + escapeHtml(item.url) + '">' + escapeHtml(item.position) + '</a></h3>'
+                    + '<span class="attention-card__id">#' + escapeHtml(item.id) + '</span>'
+                    + '</div>'
+                    + '<div class="attention-card__meta">'
+                    + '<span><strong>Client:</strong> ' + escapeHtml(item.client) + '</span>'
+                    + '<span><strong>Recruiter:</strong> ' + escapeHtml(item.recruiter) + '</span>'
+                    + '<span><strong>Month:</strong> ' + escapeHtml(item.month) + '</span>'
+                    + '<span><strong>Deadline:</strong> ' + escapeHtml(item.deadline) + '</span>'
+                    + '</div>'
+                    + '<div class="attention-card__detail">' + escapeHtml(item.detail) + '</div>'
+                    + '<p class="attention-card__desc">' + escapeHtml(item.job_description) + '</p>'
+                    + '<div class="attention-card__actions">'
+                    + '<a class="attention-card__link" href="' + escapeHtml(item.url) + '">View position</a>'
+                    + '</div>'
+                    + '</li>';
+            }).join('') + '</ul>';
+        }
+
+        function openAttentionModal(type) {
+            if (!attentionModal) return;
+
+            attentionModalTitle.textContent = 'Loading...';
+            attentionModalSubtitle.textContent = '';
+            attentionModalBody.innerHTML = '<div class="attention-modal__loading">Loading demands...</div>';
+            attentionModal.classList.add('is-open');
+            attentionModal.setAttribute('aria-hidden', 'false');
+            document.body.style.overflow = 'hidden';
+
+            const params = getParams();
+            const url = new URL('{{ url('/tracker/attention') }}/' + type, window.location.origin);
+            Object.keys(params).forEach(key => {
+                if (key !== 'tab' && (key === 'month_id' || params[key])) {
+                    url.searchParams.set(key, params[key]);
+                }
+            });
+
+            fetch(url, {
+                headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }
+            })
+            .then(res => res.json())
+            .then(data => {
+                attentionModalTitle.textContent = data.title + ' (' + data.count + ')';
+                attentionModalSubtitle.textContent = data.subtitle || '';
+                renderAttentionItems(data);
+            })
+            .catch(() => {
+                attentionModalBody.innerHTML = '<div class="attention-modal__empty">Could not load demands. Please try again.</div>';
+            });
+        }
+
+        if (attentionStripContainer) {
+            attentionStripContainer.addEventListener('click', function (e) {
+                const pill = e.target.closest('[data-attention-type]');
+                if (!pill) return;
+                openAttentionModal(pill.dataset.attentionType);
+            });
+        }
+
+        if (attentionModal) {
+            attentionModal.querySelectorAll('[data-close-attention]').forEach(function (el) {
+                el.addEventListener('click', closeAttentionModal);
+            });
+            document.addEventListener('keydown', function (e) {
+                if (e.key === 'Escape' && attentionModal.classList.contains('is-open')) {
+                    closeAttentionModal();
+                }
+            });
+        }
+
         // Tab switching
         tabs.forEach(tab => {
             tab.addEventListener('click', function() {
                 if (this.classList.contains('active') || this.classList.contains('is-loading')) return;
-                tabs.forEach(t => t.classList.remove('active'));
+                tabs.forEach(t => {
+                    t.classList.remove('active');
+                    t.setAttribute('aria-selected', 'false');
+                });
                 this.classList.add('active');
+                this.setAttribute('aria-selected', 'true');
                 currentTab = this.dataset.tab;
                 fetchData('{{ route('tracker.index') }}', getParams(), { loading: true, tabEl: this });
             });
@@ -1607,4 +2304,5 @@
         });
     });
 </script>
+</div>
 @endsection

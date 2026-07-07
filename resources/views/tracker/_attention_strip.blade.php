@@ -9,15 +9,24 @@
     <span class="attention-strip__title">Needs attention</span>
     @if($hasAlerts)
         <div class="attention-strip__items">
-            <span class="attention-pill {{ $overdue > 0 ? 'attention-pill--alert' : 'attention-pill--muted' }}" title="Open demands past submission deadline">
+            <button type="button"
+                class="attention-pill attention-pill--clickable {{ $overdue > 0 ? 'attention-pill--alert' : 'attention-pill--muted' }}"
+                data-attention-type="overdue"
+                title="View overdue demands">
                 <strong>{{ $overdue }}</strong> overdue
-            </span>
-            <span class="attention-pill {{ $dueSoon > 0 ? 'attention-pill--warn' : 'attention-pill--muted' }}" title="Open demands due by end of this week">
+            </button>
+            <button type="button"
+                class="attention-pill attention-pill--clickable {{ $dueSoon > 0 ? 'attention-pill--warn' : 'attention-pill--muted' }}"
+                data-attention-type="due_soon"
+                title="View demands due this week">
                 <strong>{{ $dueSoon }}</strong> due this week
-            </span>
-            <span class="attention-pill {{ $urgent > 0 ? 'attention-pill--urgent' : 'attention-pill--muted' }}" title="Open demands marked urgent">
+            </button>
+            <button type="button"
+                class="attention-pill attention-pill--clickable {{ $urgent > 0 ? 'attention-pill--urgent' : 'attention-pill--muted' }}"
+                data-attention-type="urgent"
+                title="View urgent demands">
                 <strong>{{ $urgent }}</strong> urgent
-            </span>
+            </button>
         </div>
     @else
         <span class="attention-strip__clear">

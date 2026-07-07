@@ -12,7 +12,10 @@ class MonthController extends Controller
      */
     public function index()
     {
-        $months = Month::orderBy('id', 'desc')->get();
+        $months = Month::withCount('trackers')
+            ->get()
+            ->sortByDesc(fn ($m) => Month::parseMonthDate($m->month))
+            ->values();
         return view('months.index', compact('months'));
     }
 

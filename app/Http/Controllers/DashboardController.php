@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Exports\DashboardExport;
 use App\Models\Client;
+use App\Models\JobStatus;
 use App\Models\Month;
 use App\Models\StaffUser;
 use App\Models\TrackerCandidate;
@@ -24,6 +25,11 @@ class DashboardController extends Controller
 
     private const STATUS_OPEN = 1;
 
+    private function unservedStatusId(): int
+    {
+        return JobStatus::unservedId();
+    }
+
     public function index(Request $request)
     {
         return view('dashboard.index', [
@@ -36,6 +42,32 @@ class DashboardController extends Controller
     public function data(Request $request)
     {
         return response()->json($this->buildPayload($request));
+    }
+
+    public function positions(Request $request)
+    {
+        $base = $this->baseQuery($request);
+        $trackerIds = (clone $base)->pluck('id');
+        $placedIds = $this->placedPositionIds($trackerIds);
+        $placedLookup = $placedIds->flip();
+
+        $paginated = (clone $base)
+            ->with(['client', 'leadRecruiter', 'jobStatus', 'month', 'region'])
+            ->withCount('trackerCandidates')
+            ->orderByDesc('id')
+            ->paginate(15);
+
+        return response()->json([
+            'items' => $paginated->getCollection()
+                ->map(fn (TrackerInfo $info) => $this->formatPositionRow($info, $placedLookup))
+                ->values()
+                ->all(),
+            'pagination' => $paginated->appends($request->query())->links('vendor.pagination.custom')->render(),
+            'count_text' => $paginated->total() > 0
+                ? "Showing {$paginated->firstItem()} to {$paginated->lastItem()} of {$paginated->total()} entries"
+                : 'No entries found',
+            'total' => $paginated->total(),
+        ]);
     }
 
     public function kpiDetail(Request $request, string $kpi)
@@ -117,8 +149,9 @@ class DashboardController extends Controller
             'regionGroups' => [
                 ['value' => 'Canada', 'label' => 'Canada'],
                 ['value' => 'USA', 'label' => 'USA'],
+                ['value' => 'India', 'label' => 'India'],
             ],
-            'priorities' => ['Urgent', 'High', 'Medium', 'Low'],
+            'priorities' => ['Urgent', 'High', 'Intermediate', 'Medium', 'Low'],
             'jobTypes' => ['onsite', 'remote', 'hybrid'],
             'sources' => ['Internal', 'External', 'Dice', 'Linkedin', 'Others'],
             'statuses' => [
@@ -232,7 +265,8 @@ class DashboardController extends Controller
             ->whereNotIn('id', $placedIds)->count();
         $open = (clone $base)->where('job_status_FK', self::STATUS_OPEN)
             ->whereNotIn('id', $placedIds)->count();
-        $inProgress = max(0, $total - $placed - $rejected - $open);
+        $unserved = (clone $base)->where('job_status_FK', $this->unservedStatusId())->count();
+        $inProgress = max(0, $total - $placed - $rejected - $open - $unserved);
 
         $candidateBase = TrackerCandidate::whereIn('tracker_info_id', $trackerIds);
         $totalCandidates = (clone $candidateBase)->count();
@@ -267,7 +301,6 @@ class DashboardController extends Controller
             'job_type_breakdown' => $this->groupCount($base, 'type_of_job', ['onsite', 'remote', 'hybrid']),
             'source_breakdown' => $this->groupCount($base, 'csi', ['Internal', 'External', 'Dice', 'Linkedin', 'Others']),
             'pipeline_funnel' => $this->pipelineFunnel($candidateBase),
-            'recent_positions' => $this->recentPositions($base, $placedIds),
         ];
     }
 
@@ -340,7 +373,8 @@ class DashboardController extends Controller
             ->withCount('trackerCandidates')
             ->get()
             ->filter(fn (TrackerInfo $info) => ! $placedLookup->has($info->id)
-                && (int) $info->job_status_FK !== self::STATUS_REJECTED);
+                && (int) $info->job_status_FK !== self::STATUS_REJECTED
+                && ! $info->isUnserved());
 
         $items = [];
         foreach ($positions as $info) {
@@ -395,7 +429,8 @@ class DashboardController extends Controller
             'in_progress' => $query->get()->filter(function (TrackerInfo $info) use ($placedLookup) {
                 return ! $placedLookup->has($info->id)
                     && (int) $info->job_status_FK !== self::STATUS_OPEN
-                    && (int) $info->job_status_FK !== self::STATUS_REJECTED;
+                    && (int) $info->job_status_FK !== self::STATUS_REJECTED
+                    && ! $info->isUnserved();
             })->values(),
             'placed' => $query->whereIn('id', $placedIds)->get(),
             'rejected' => $query->where('job_status_FK', self::STATUS_REJECTED)
@@ -430,14 +465,14 @@ class DashboardController extends Controller
     {
         $isPlaced = $placedLookup->has($info->id);
         $status = $isPlaced
-            ? 'Candidate Placement Confirmed'
-            : ($info->jobStatus->status ?? 'Demand Raised');
+            ? JobStatus::placementCompletedLabel()
+            : ($info->jobStatus->status ?? JobStatus::labelFor(1, 'Demand Raised'));
 
         return [
             'id' => $info->id,
             'position' => $info->position ?: 'Untitled Position',
             'client' => $info->client->client ?? '—',
-            'recruiter' => $info->leadRecruiter->username ?? '—',
+            'recruiter' => $info->isUnserved() ? '—' : ($info->leadRecruiter->username ?? '—'),
             'month' => $info->month->month ?? '—',
             'priority' => $info->priority ?: '—',
             'status' => $status,

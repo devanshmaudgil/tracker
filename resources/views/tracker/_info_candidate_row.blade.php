@@ -54,6 +54,10 @@
     data-project-start="{{ $status && $status->candidate_project_start_date ? $status->candidate_project_start_date->format('Y-m-d') : '' }}"
     data-final-status="{{ $status ? ($status->final_status_placement_completion ?? '') : '' }}"
     data-placement-date="{{ $status && $status->placement_completion_date ? $status->placement_completion_date->format('Y-m-d') : '' }}"
+    data-recruiter-notes="{{ $status ? e($status->recruiter_notes ?? '') : '' }}"
+    data-pay-rate="{{ $tc->candidate->pay_rate ?? '' }}"
+    data-placement-pay-rate="{{ $tc->candidate->placement_pay_rate ?? '' }}"
+    data-candidate-summary="{{ e($tc->candidate->summary ?? '') }}"
     data-current-status-id="{{ $tc->current_status_id }}"
     data-candidate-name="{{ $tc->candidate->full_name }}"
     >
@@ -61,6 +65,15 @@
     <td>
         <div class="candidate-name">{{ $tc->candidate->full_name }}</div>
         <div class="candidate-email">{{ $tc->candidate->email }}</div>
+        @if($tc->candidate->pay_rate)
+            <div class="candidate-meta">Pay: {{ $tc->candidate->pay_rate }}</div>
+        @endif
+        @if($tc->candidate->placement_pay_rate)
+            <div class="candidate-meta">Placement: {{ $tc->candidate->placement_pay_rate }}</div>
+        @endif
+        @if($tc->candidate->summary)
+            <div class="candidate-meta candidate-summary" title="{{ $tc->candidate->summary }}">{{ \Illuminate\Support\Str::limit($tc->candidate->summary, 72) }}</div>
+        @endif
         @if($showApprovedWorkflow)
             <div class="candidate-approved-meta">Approved {{ $tc->approved_at?->format('d M Y') ?? '—' }}</div>
         @endif
@@ -69,6 +82,8 @@
     <td class="hide-mobile" style="font-size:12px;">
         @if($tc->candidate->location)
             {{ $tc->candidate->location->city ? $tc->candidate->location->city . ', ' : '' }}{{ $tc->candidate->location->region }}
+        @elseif($tc->candidate->location_text)
+            {{ $tc->candidate->location_text }}
         @else
             <span style="color:var(--c-muted);">—</span>
         @endif

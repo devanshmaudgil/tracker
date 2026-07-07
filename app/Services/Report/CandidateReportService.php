@@ -2,9 +2,9 @@
 
 namespace App\Services\Report;
 
-use App\Models\TrackerInfo;
-use App\Models\TrackerCandidate;
 use App\Models\CandidatePipelineStatus;
+use App\Models\JobStatus;
+use App\Models\TrackerInfo;
 use Carbon\Carbon;
 use PhpOffice\PhpWord\PhpWord;
 use PhpOffice\PhpWord\IOFactory;
@@ -165,6 +165,8 @@ class CandidateReportService
             ['Work Authorization', $candidate->work_status ?? 'N/A'],
             ['Current Company',    $candidate->current_company ?? 'N/A'],
             ['Pay Rate',           $candidate->pay_rate ?? 'N/A'],
+            ['Placement Pay Rate', $candidate->placement_pay_rate ?? 'N/A'],
+            ['Summary',            $candidate->summary ?? 'N/A'],
             ['Agency',             $candidate->agency_name ?? 'N/A'],
             ['Agency POC',         $candidate->agency_poc ?? 'N/A'],
             ['Agency POC Phone',   $candidate->agency_poc_phone ?? 'N/A'],
@@ -432,38 +434,40 @@ class CandidateReportService
 
     private function buildSteps(CandidatePipelineStatus $p, TrackerCandidate $tc): array
     {
+        $s = fn (int $id, string $fallback = '') => JobStatus::labelFor($id, $fallback);
+
         return [
-            ['title' => 'Candidate Identified',          'completed' => true,
+            ['title' => $s(2, 'Candidate Identified'),          'completed' => true,
              'date'  => $tc->created_at?->format('d M Y'), 'detail' => null],
-            ['title' => 'Resume Reviewed by Recruiter',  'completed' => $p->resume_reviewed_by_recruiter === 'Completed',
+            ['title' => $s(3, 'Resume Reviewed'),  'completed' => $p->resume_reviewed_by_recruiter === 'Completed',
              'date'  => $p->resume_reviewed_date?->format('d M Y'), 'detail' => $p->resume_reviewed_by_recruiter],
-            ['title' => 'Recruiter Screening Call',      'completed' => $p->recruiter_screening_call === 'Completed',
+            ['title' => $s(4, 'Screening Call'),      'completed' => $p->recruiter_screening_call === 'Completed',
              'date'  => $p->recruiter_screening_call_date?->format('d M Y'), 'detail' => $p->recruiter_screening_call],
-            ['title' => 'Candidate Shortlisted',         'completed' => (bool) $p->candidate_shortlisted,
+            ['title' => $s(5, 'Shortlisted'),         'completed' => (bool) $p->candidate_shortlisted,
              'date'  => null, 'detail' => $p->candidate_shortlisted ? 'Yes' : 'No'],
-            ['title' => 'Resume Submitted to Client',    'completed' => $p->resume_submitted_to_client === 'Submitted',
+            ['title' => $s(6, 'Submitted to client'),    'completed' => $p->resume_submitted_to_client === 'Submitted',
              'date'  => null, 'detail' => $p->resume_submitted_to_client],
-            ['title' => 'Internal Interview Prep',       'completed' => in_array($p->radix_internal_interview_prep, ['Completed','Not Required']),
+            ['title' => $s(7, 'Internal Prep'),       'completed' => in_array($p->radix_internal_interview_prep, ['Completed','Not Required']),
              'date'  => $p->radix_internal_interview_prep_date?->format('d M Y'), 'detail' => $p->radix_internal_interview_prep],
-            ['title' => 'Client Resume Review',          'completed' => $p->client_resume_review === 'Approved',
+            ['title' => $s(8, 'Client Review'),          'completed' => $p->client_resume_review === 'Approved',
              'date'  => null, 'detail' => $p->client_resume_review],
-            ['title' => 'Client Interview - Round 1',    'completed' => !empty($p->client_interview_round_1_date),
+            ['title' => $s(9, 'Round 1'),    'completed' => !empty($p->client_interview_round_1_date),
              'date'  => $p->client_interview_round_1_date?->format('d M Y'), 'detail' => null],
-            ['title' => 'Client Interview - Round 2',    'completed' => !empty($p->client_interview_round_2_date),
+            ['title' => $s(10, 'Round 2'),    'completed' => !empty($p->client_interview_round_2_date),
              'date'  => $p->client_interview_round_2_date?->format('d M Y'), 'detail' => null],
-            ['title' => 'Additional Interview Rounds',   'completed' => (bool) $p->additional_rounds,
+            ['title' => $s(11, 'Additional Round'),   'completed' => (bool) $p->additional_rounds,
              'date'  => null, 'detail' => $p->additional_rounds ? 'Yes' : 'No'],
-            ['title' => 'Client Decision',               'completed' => !empty($p->client_decision),
+            ['title' => $s(12, 'Client Decision Awaited'),               'completed' => !empty($p->client_decision),
              'date'  => $p->client_decision_date?->format('d M Y'), 'detail' => $p->client_decision],
-            ['title' => 'Client Confirmation',           'completed' => (bool) $p->client_confirmation_received,
+            ['title' => $s(13, 'Client Confirmation Recieved'),           'completed' => (bool) $p->client_confirmation_received,
              'date'  => $p->client_confirmation_date?->format('d M Y'), 'detail' => null],
-            ['title' => 'Offer Extended to Candidate',   'completed' => (bool) $p->offer_extended_to_candidate,
+            ['title' => $s(14, 'Offer Extended to Candidate'),   'completed' => (bool) $p->offer_extended_to_candidate,
              'date'  => $p->offer_extended_date?->format('d M Y'), 'detail' => null],
-            ['title' => 'Background Check',              'completed' => $p->background_check === 'Completed',
+            ['title' => $s(15, 'Background Check'),              'completed' => $p->background_check === 'Completed',
              'date'  => null, 'detail' => $p->background_check],
-            ['title' => 'Candidate Project Start',       'completed' => !empty($p->candidate_project_start_date),
+            ['title' => $s(16, 'Candidate Project Start'),       'completed' => !empty($p->candidate_project_start_date),
              'date'  => $p->candidate_project_start_date?->format('d M Y'), 'detail' => null],
-            ['title' => 'Placement Completion',          'completed' => $p->final_status_placement_completion === 'Confirmed',
+            ['title' => $s(17, 'Candidate Placement Completed'),          'completed' => $p->final_status_placement_completion === 'Confirmed',
              'date'  => $p->placement_completion_date?->format('d M Y'), 'detail' => $p->final_status_placement_completion],
         ];
     }

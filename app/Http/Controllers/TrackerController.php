@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\JobStatus;
 use App\Models\TrackerInfo;
 use App\Models\Month;
 use App\Models\StaffUser;
@@ -10,7 +11,6 @@ use App\Models\Region;
 use App\Models\TrackerCandidate;
 use App\Models\CandidatePipelineStatus;
 use App\Models\Candidate;
-use App\Models\JobStatus;
 use App\Services\Tracker\CandidatePipelineService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -28,21 +28,43 @@ class TrackerController extends Controller
     ) {
     }
 
-    private function applyTrackerFilters($query, Request $request, ?int $selectedMonthId, bool $includeSearch = true): void
+    private function applyTrackerFilters($query, Request $request, string $selectedYear, ?int $selectedMonthId, bool $includeSearch = true): void
     {
         if ($includeSearch && $request->filled('search')) {
             $search = $request->search;
             $query->where(function ($q) use ($search) {
-                $q->where('position', 'like', "%{$search}%")
-                    ->orWhere('id', 'like', "%{$search}%")
+                $q->where('id', 'like', "%{$search}%")
+                    ->orWhere('position', 'like', "%{$search}%")
+                    ->orWhere('type_of_job', 'like', "%{$search}%")
+                    ->orWhere('bill_rate_salary_range', 'like', "%{$search}%")
+                    ->orWhere('priority', 'like', "%{$search}%")
+                    ->orWhere('cf', 'like', "%{$search}%")
+                    ->orWhere('csi', 'like', "%{$search}%")
+                    ->orWhereHas('month', function ($q2) use ($search) {
+                        $q2->where('month', 'like', "%{$search}%");
+                    })
                     ->orWhereHas('client', function ($q2) use ($search) {
                         $q2->where('client', 'like', "%{$search}%");
+                    })
+                    ->orWhereHas('region', function ($q2) use ($search) {
+                        $q2->where('region', 'like', "%{$search}%")
+                            ->orWhere('city', 'like', "%{$search}%");
+                    })
+                    ->orWhereHas('leadRecruiter', function ($q2) use ($search) {
+                        $q2->where('username', 'like', "%{$search}%");
                     });
             });
         }
 
         if ($selectedMonthId) {
             $query->where('month_id', $selectedMonthId);
+        } elseif ($selectedYear !== '') {
+            $monthIds = Month::monthIdsForYear($selectedYear);
+            if ($monthIds->isNotEmpty()) {
+                $query->whereIn('month_id', $monthIds);
+            } else {
+                $query->whereRaw('0 = 1');
+            }
         }
 
         if ($request->filled('client_id')) {
@@ -54,10 +76,10 @@ class TrackerController extends Controller
         }
     }
 
-    private function attentionSummary(Request $request, ?int $selectedMonthId): array
+    private function attentionSummary(Request $request, string $selectedYear, ?int $selectedMonthId): array
     {
-        $query = TrackerInfo::query()->whereNotIn('job_status_FK', [17, 18]);
-        $this->applyTrackerFilters($query, $request, $selectedMonthId);
+        $query = TrackerInfo::query()->whereNotIn('job_status_FK', [17, 18, JobStatus::unservedId()]);
+        $this->applyTrackerFilters($query, $request, $selectedYear, $selectedMonthId);
 
         $today = Carbon::today();
         $weekEnd = Carbon::today()->endOfWeek();
@@ -77,64 +99,137 @@ class TrackerController extends Controller
         ];
     }
 
-    public function index(Request $request)
+    public function attentionDetail(Request $request, string $type)
     {
-        if (! $request->ajax() && ! $request->filled('month_id')) {
-            $defaultMonthId = Month::latestMonth()?->id;
+        $allowed = ['overdue', 'due_soon', 'urgent'];
+        if (! in_array($type, $allowed, true)) {
+            return response()->json(['message' => 'Invalid attention type.'], 404);
+        }
 
-            if ($defaultMonthId) {
-                return redirect()->route('tracker.index', array_merge(
-                    $request->query(),
-                    ['month_id' => $defaultMonthId]
-                ));
+        $selectedYear = Month::resolveSelectedYear($request);
+        $selectedMonthId = Month::resolveSelectedId($request);
+
+        if ($selectedMonthId) {
+            $month = Month::find($selectedMonthId);
+            if (! $month || $month->yearLabel() !== $selectedYear) {
+                $selectedMonthId = null;
             }
         }
 
-        $months = Month::orderedLatestFirst();
+        $query = TrackerInfo::query()
+            ->whereNotIn('job_status_FK', [17, 18, JobStatus::unservedId()])
+            ->with(['client', 'leadRecruiter', 'jobStatus', 'month']);
+        $this->applyTrackerFilters($query, $request, $selectedYear, $selectedMonthId);
+
+        $today = Carbon::today();
+        $weekEnd = Carbon::today()->endOfWeek();
+
+        $items = match ($type) {
+            'overdue' => (clone $query)
+                ->whereNotNull('submission_deadline')
+                ->whereDate('submission_deadline', '<', $today)
+                ->orderBy('submission_deadline')
+                ->get(),
+            'due_soon' => (clone $query)
+                ->whereNotNull('submission_deadline')
+                ->whereBetween('submission_deadline', [$today, $weekEnd])
+                ->orderBy('submission_deadline')
+                ->get(),
+            'urgent' => (clone $query)
+                ->where('priority', 'Urgent')
+                ->orderByDesc('id')
+                ->get(),
+        };
+
+        $meta = match ($type) {
+            'overdue' => [
+                'title' => 'Overdue Demands',
+                'subtitle' => 'Open positions past their submission deadline',
+            ],
+            'due_soon' => [
+                'title' => 'Due This Week',
+                'subtitle' => 'Open positions with a deadline by end of this week',
+            ],
+            'urgent' => [
+                'title' => 'Urgent Demands',
+                'subtitle' => 'Open positions marked as urgent priority',
+            ],
+        };
+
+        return response()->json(array_merge($meta, [
+            'type' => $type,
+            'count' => $items->count(),
+            'items' => $items->map(function (TrackerInfo $info) use ($type, $today) {
+                $deadlineLabel = $info->submission_deadline?->format('M d, Y') ?? '—';
+
+                $detail = match ($type) {
+                    'overdue' => $info->submission_deadline
+                        ? 'Deadline was ' . $info->submission_deadline->format('M d, Y')
+                            . ' (' . $info->submission_deadline->diffInDays($today) . ' day(s) ago)'
+                        : 'Past submission deadline',
+                    'due_soon' => $info->submission_deadline
+                        ? 'Due by ' . $info->submission_deadline->format('M d, Y')
+                        : 'Due this week',
+                    default => 'Urgent priority — requires immediate recruiter action',
+                };
+
+                return [
+                    'id' => $info->id,
+                    'position' => $info->position ?: 'Untitled Position',
+                    'client' => $info->client->client ?? '—',
+                    'recruiter' => $info->isUnserved() ? '—' : ($info->leadRecruiter->username ?? '—'),
+                    'month' => $info->month->month ?? '—',
+                    'status' => $info->jobStatus->status ?? 'Demand Raised',
+                    'priority' => $info->priority ?? '—',
+                    'deadline' => $deadlineLabel,
+                    'job_description' => $info->job_description ?: 'No job description provided.',
+                    'detail' => $detail,
+                    'url' => route('tracker.info', $info->id),
+                ];
+            })->values()->all(),
+        ]));
+    }
+
+    public function index(Request $request)
+    {
+        if (! $request->ajax()) {
+            $params = $request->query();
+            $needsRedirect = false;
+
+            if (! $request->filled('year')) {
+                $params['year'] = Month::resolveSelectedYear($request);
+                $needsRedirect = true;
+            }
+
+            if (! $request->query->has('month_id')) {
+                $defaultMonth = Month::currentMonth();
+                if ($defaultMonth) {
+                    $params['month_id'] = $defaultMonth->id;
+                    $needsRedirect = true;
+                }
+            }
+
+            if ($needsRedirect) {
+                return redirect()->route('tracker.index', $params);
+            }
+        }
+
+        $years = Month::availableYears();
+        $selectedYear = Month::resolveSelectedYear($request);
         $selectedMonthId = Month::resolveSelectedId($request);
 
-        $query = TrackerInfo::with(['month', 'client', 'region', 'leadRecruiter', 'jobStatus']);
-        
-        // Search functionality
-        if ($request->filled('search')) {
-            $search = $request->search;
-            $query->where(function($q) use ($search) {
-                $q->where('id', 'like', "%{$search}%")
-                  ->orWhere('position', 'like', "%{$search}%")
-                  ->orWhere('type_of_job', 'like', "%{$search}%")
-                  ->orWhere('bill_rate_salary_range', 'like', "%{$search}%")
-                  ->orWhere('priority', 'like', "%{$search}%")
-                  ->orWhere('cf', 'like', "%{$search}%")
-                  ->orWhere('csi', 'like', "%{$search}%")
-                  ->orWhereHas('month', function($q) use ($search) {
-                      $q->where('month', 'like', "%{$search}%");
-                  })
-                  ->orWhereHas('client', function($q) use ($search) {
-                      $q->where('client', 'like', "%{$search}%");
-                  })
-                  ->orWhereHas('region', function($q) use ($search) {
-                      $q->where('region', 'like', "%{$search}%")
-                        ->orWhere('city', 'like', "%{$search}%");
-                  })
-                  ->orWhereHas('leadRecruiter', function($q) use ($search) {
-                      $q->where('username', 'like', "%{$search}%");
-                  });
-            });
-        }
-        
         if ($selectedMonthId) {
-            $query->where('month_id', $selectedMonthId);
+            $month = Month::find($selectedMonthId);
+            if (! $month || $month->yearLabel() !== $selectedYear) {
+                $selectedMonthId = null;
+            }
         }
-        
-        // Filter by client
-        if ($request->filled('client_id')) {
-            $query->where('client_id', $request->client_id);
-        }
-        
-        // Filter by lead recruiter
-        if ($request->filled('lead_recruiter_id')) {
-            $query->where('lr', $request->lead_recruiter_id);
-        }
+
+        $months = Month::forYear($selectedYear);
+        $allMonths = Month::orderedLatestFirst();
+
+        $query = TrackerInfo::with(['month', 'client', 'region', 'leadRecruiter', 'jobStatus']);
+        $this->applyTrackerFilters($query, $request, $selectedYear, $selectedMonthId);
 
         // Tab filtering
         $tab = $request->get('tab', 'demand_raised');
@@ -156,7 +251,7 @@ class TrackerController extends Controller
                     $query->whereIn('job_status_FK', [9, 10, 11]);
                     break;
                 case 'decision':
-                    $query->where('job_status_FK', 12);
+                    $query->whereIn('job_status_FK', [12, 13, 14, 15, 16]);
                     break;
                 case 'accepted':
                     $query->where('job_status_FK', 17);
@@ -164,14 +259,35 @@ class TrackerController extends Controller
                 case 'rejected':
                     $query->where('job_status_FK', 18);
                     break;
+                case 'unserved':
+                    $query->where('job_status_FK', JobStatus::unservedId());
+                    break;
             }
         }
         
-        $trackerInfos = $query->orderBy('id', 'desc')->paginate(20);
+        $trackerInfos = $query
+            ->with(['month', 'client', 'region', 'regions', 'leadRecruiter', 'jobStatus'])
+            ->withCount([
+                'trackerCandidates as placed_candidates_count' => fn ($q) => $q
+                    ->whereNull('rejected_at')
+                    ->whereHas('pipelineStatus', fn ($p) => $p->where('final_status_placement_completion', 'Confirmed')),
+                'trackerCandidates as active_candidates_count' => fn ($q) => $q
+                    ->whereNull('rejected_at')
+                    ->where(function ($inner) {
+                        $inner->whereDoesntHave('pipelineStatus')
+                            ->orWhereHas('pipelineStatus', fn ($p) => $p
+                                ->where(function ($c) {
+                                    $c->whereNull('final_status_placement_completion')
+                                        ->orWhere('final_status_placement_completion', '!=', 'Confirmed');
+                                }));
+                    }),
+            ])
+            ->orderBy('id', 'desc')
+            ->paginate(20);
 
         // Calculate counts for tabs based on current filters (excluding tab itself)
         $baseCountQuery = TrackerInfo::query();
-        $this->applyTrackerFilters($baseCountQuery, $request, $selectedMonthId);
+        $this->applyTrackerFilters($baseCountQuery, $request, $selectedYear, $selectedMonthId);
 
         $counts = [
             'demand_raised' => (clone $baseCountQuery)->where('job_status_FK', 1)->count(),
@@ -179,16 +295,20 @@ class TrackerController extends Controller
             'screening' => (clone $baseCountQuery)->whereIn('job_status_FK', [3, 4, 5])->count(),
             'submission' => (clone $baseCountQuery)->whereIn('job_status_FK', [6, 7, 8])->count(),
             'interview' => (clone $baseCountQuery)->whereIn('job_status_FK', [9, 10, 11])->count(),
-            'decision' => (clone $baseCountQuery)->where('job_status_FK', 12)->count(),
+            'decision' => (clone $baseCountQuery)->whereIn('job_status_FK', [12, 13, 14, 15, 16])->count(),
             'accepted' => (clone $baseCountQuery)->where('job_status_FK', 17)->count(),
             'rejected' => (clone $baseCountQuery)->where('job_status_FK', 18)->count(),
+            'unserved' => (clone $baseCountQuery)->where('job_status_FK', JobStatus::unservedId())->count(),
         ];
         
+        $monthIds = Month::monthIdsForYear($selectedYear);
         $totalRequisition = $selectedMonthId
             ? TrackerInfo::where('month_id', $selectedMonthId)->count()
-            : 0;
+            : ($monthIds->isNotEmpty()
+                ? TrackerInfo::whereIn('month_id', $monthIds)->count()
+                : 0);
 
-        $attentionSummary = $this->attentionSummary($request, $selectedMonthId);
+        $attentionSummary = $this->attentionSummary($request, $selectedYear, $selectedMonthId);
 
         if ($request->ajax()) {
             return response()->json([
@@ -206,15 +326,18 @@ class TrackerController extends Controller
         $clients = Client::orderBy('client', 'asc')->get();
         $regions = Region::orderBy('region', 'asc')->get();
         $leadRecruiters = StaffUser::orderBy('id', 'desc')->get();
-        $selectedMonth = $months->firstWhere('id', $selectedMonthId);
+        $selectedMonth = $selectedMonthId ? $months->firstWhere('id', $selectedMonthId) : null;
         
         return view('tracker.index', compact(
             'trackerInfos',
             'months',
+            'allMonths',
+            'years',
             'clients',
             'regions',
             'leadRecruiters',
             'counts',
+            'selectedYear',
             'selectedMonthId',
             'selectedMonth',
             'totalRequisition',
@@ -238,24 +361,51 @@ class TrackerController extends Controller
             'month_id' => 'required|exists:months,id',
             'client_id' => 'nullable|exists:clients,id',
             'region_id' => 'nullable|exists:regions,id',
+            'region_ids' => 'nullable|array',
+            'region_ids.*' => 'exists:regions,id',
             'prd' => 'nullable|date',
-            'cf' => 'nullable|in:Canada,USA',
+            'cf' => 'nullable|in:Canada,USA,India',
             'country' => 'nullable|string|max:255',
             'position' => 'nullable|string|max:255',
             'job_description' => 'nullable|string',
             'type_of_job' => 'nullable|in:onsite,remote,hybrid',
             'bill_rate_salary_range' => 'nullable|string|max:255',
-            'priority' => 'nullable|in:Urgent,Low,High,Medium',
+            'priority' => 'nullable|in:Urgent,Low,High,Medium,Intermediate',
             'submission_deadline' => 'nullable|date',
+            'notes' => 'nullable|string',
             'lr' => 'nullable|exists:staff_users,id',
             'csi' => 'nullable|in:Internal,External,Dice,Linkedin,Others',
         ]);
 
-        $data = $request->all();
+        $regionIds = $this->resolveRegionIds($request);
+
+        $data = $request->except('region_ids');
+        $data['region_id'] = $regionIds[0] ?? $request->input('region_id');
         $data['job_status_FK'] = 1; // Default to Demand Raised
-        TrackerInfo::create($data);
+
+        $trackerInfo = TrackerInfo::create($data);
+        $trackerInfo->regions()->sync($regionIds);
 
         return redirect()->route('tracker.index')->with('success', 'Tracker info added successfully.');
+    }
+
+    /**
+     * Resolve the ordered list of region ids from the request, preferring the
+     * multi-select field but falling back to the single region_id.
+     *
+     * @return list<int>
+     */
+    private function resolveRegionIds(Request $request): array
+    {
+        $ids = collect($request->input('region_ids', []))
+            ->filter()
+            ->map(fn ($id) => (int) $id);
+
+        if ($ids->isEmpty() && $request->filled('region_id')) {
+            $ids = collect([(int) $request->input('region_id')]);
+        }
+
+        return $ids->unique()->values()->all();
     }
 
     public function show(string $id)
@@ -285,9 +435,9 @@ class TrackerController extends Controller
 
     public function info(string $id)
     {
-        $trackerInfo = TrackerInfo::with(['month', 'client', 'region', 'leadRecruiter', 'jobStatus'])
+        $trackerInfo = TrackerInfo::with(['month', 'client', 'region', 'regions', 'leadRecruiter', 'jobStatus'])
             ->findOrFail($id);
-
+        
         $notPlaced = fn ($q) => $q->where(function ($inner) {
             $inner->whereDoesntHave('pipelineStatus')
                 ->orWhereHas('pipelineStatus', function ($pq) {
@@ -328,7 +478,7 @@ class TrackerController extends Controller
             ->get();
 
         $pipelineCount = $activeCandidates->count() + $approvedCandidates->count();
-        $placementConfirmedLabel = 'Candidate Placement Confirmed';
+        $placementConfirmedLabel = JobStatus::placementCompletedLabel();
 
         $assignedCandidateIds = $trackerInfo->trackerCandidates()->pluck('candidate_id');
 
@@ -376,13 +526,14 @@ class TrackerController extends Controller
 
     public function edit(string $id)
     {
-        $trackerInfo = TrackerInfo::findOrFail($id);
+        $trackerInfo = TrackerInfo::with('regions')->findOrFail($id);
         $months = Month::orderBy('id', 'desc')->get();
         $clients = Client::orderBy('client', 'asc')->get();
         $regions = Region::orderBy('region', 'asc')->get();
         $leadRecruiters = StaffUser::orderBy('id', 'desc')->get();
-        
-        return view('tracker.edit', compact('trackerInfo', 'months', 'clients', 'regions', 'leadRecruiters'));
+        $selectedRegionIds = $trackerInfo->regions->pluck('id')->all();
+
+        return view('tracker.edit', compact('trackerInfo', 'months', 'clients', 'regions', 'leadRecruiters', 'selectedRegionIds'));
     }
 
     public function update(Request $request, string $id)
@@ -391,23 +542,52 @@ class TrackerController extends Controller
             'month_id' => 'required|exists:months,id',
             'client_id' => 'nullable|exists:clients,id',
             'region_id' => 'nullable|exists:regions,id',
+            'region_ids' => 'nullable|array',
+            'region_ids.*' => 'exists:regions,id',
             'prd' => 'nullable|date',
-            'cf' => 'nullable|in:Canada,USA',
+            'cf' => 'nullable|in:Canada,USA,India',
             'country' => 'nullable|string|max:255',
             'position' => 'nullable|string|max:255',
             'job_description' => 'nullable|string',
             'type_of_job' => 'nullable|in:onsite,remote,hybrid',
             'bill_rate_salary_range' => 'nullable|string|max:255',
-            'priority' => 'nullable|in:Urgent,Low,High,Medium',
+            'priority' => 'nullable|in:Urgent,Low,High,Medium,Intermediate',
             'submission_deadline' => 'nullable|date',
+            'notes' => 'nullable|string',
             'lr' => 'nullable|exists:staff_users,id',
             'csi' => 'nullable|in:Internal,External,Dice,Linkedin,Others',
         ]);
 
         $trackerInfo = TrackerInfo::findOrFail($id);
-        $trackerInfo->update($request->all());
+
+        $regionIds = $this->resolveRegionIds($request);
+
+        $data = $request->except('region_ids');
+        $data['region_id'] = $regionIds[0] ?? $request->input('region_id');
+
+        $trackerInfo->update($data);
+        $trackerInfo->regions()->sync($regionIds);
 
         return redirect()->route('tracker.index')->with('success', 'Tracker info updated successfully.');
+    }
+
+    public function updateRemarks(Request $request, string $id)
+    {
+        $request->validate([
+            'remarks' => 'nullable|string|max:5000',
+        ]);
+
+        $trackerInfo = TrackerInfo::findOrFail($id);
+        $trackerInfo->update(['remarks' => $request->input('remarks')]);
+
+        if ($request->ajax() || $request->wantsJson()) {
+            return response()->json([
+                'success' => true,
+                'remarks' => $trackerInfo->remarks,
+            ]);
+        }
+
+        return back()->with('success', 'Remarks saved.');
     }
 
     public function destroy(string $id)
@@ -468,9 +648,10 @@ class TrackerController extends Controller
                 case 'screening': $query->whereIn('job_status_FK', [3, 4, 5]); break;
                 case 'submission': $query->whereIn('job_status_FK', [6, 7, 8]); break;
                 case 'interview': $query->whereIn('job_status_FK', [9, 10, 11]); break;
-                case 'decision': $query->where('job_status_FK', 12); break;
+                case 'decision': $query->whereIn('job_status_FK', [12, 13, 14, 15, 16]); break;
                 case 'accepted': $query->where('job_status_FK', 17); break;
                 case 'rejected': $query->where('job_status_FK', 18); break;
+                case 'unserved': $query->where('job_status_FK', JobStatus::unservedId()); break;
             }
         }
 
@@ -580,7 +761,7 @@ class TrackerController extends Controller
     {
         $trackerCandidate = TrackerCandidate::with(['pipelineStatus', 'status', 'candidate'])->findOrFail($trackerCandidateId);
         $hasResume = (bool) $trackerCandidate->candidate?->resume_file_url;
-
+        
         if (!$trackerCandidate->pipelineStatus) {
             return response()->json([
                 'candidate_identified' => false,
@@ -623,7 +804,7 @@ class TrackerController extends Controller
         $status = $trackerCandidate->pipelineStatus;
         $items = $this->pipelineService->checklistItems($status, $hasResume);
         $placementLabel = $status->final_status_placement_completion === 'Confirmed'
-            ? 'Candidate Placement Confirmed'
+            ? JobStatus::placementCompletedLabel()
             : ($trackerCandidate->status?->status ?? 'Unknown');
 
         return response()->json([
@@ -659,6 +840,7 @@ class TrackerController extends Controller
             'candidate_project_start_date' => $status->candidate_project_start_date ? $status->candidate_project_start_date->format('Y-m-d') : null,
             'final_status_placement_completion' => $status->final_status_placement_completion,
             'placement_completion_date' => $status->placement_completion_date ? $status->placement_completion_date->format('Y-m-d') : null,
+            'recruiter_notes' => $status->recruiter_notes,
             'current_status_id' => $trackerCandidate->current_status_id,
             'current_status_label' => $placementLabel,
         ]);
@@ -685,7 +867,7 @@ class TrackerController extends Controller
             'client_interview_round_1_date' => 'nullable|date',
             'client_interview_round_2_date' => 'nullable|date',
             'additional_rounds' => 'nullable|boolean',
-            'client_decision' => 'nullable|in:Selected,Rejected,On Hold',
+            'client_decision' => 'nullable|in:Selected,Rejected,On Hold,Selected but declined the offer',
             'client_decision_date' => 'nullable|date',
             'client_confirmation_received' => 'nullable|boolean',
             'client_confirmation_date' => 'nullable|date',
@@ -695,6 +877,7 @@ class TrackerController extends Controller
             'candidate_project_start_date' => 'nullable|date',
             'final_status_placement_completion' => 'nullable|in:Confirmed,Not Confirmed',
             'placement_completion_date' => 'nullable|date',
+            'recruiter_notes' => 'nullable|string',
         ]);
 
         $trackerCandidate = TrackerCandidate::with(['pipelineStatus', 'candidate'])->findOrFail($trackerCandidateId);
@@ -714,12 +897,12 @@ class TrackerController extends Controller
         $newStatusId = $this->resolveTrackerStatusId($trackerCandidate, $pipeline, $hasResume);
 
         $trackerCandidate->update(['current_status_id' => $newStatusId]);
-
-        $trackerInfo = TrackerInfo::find($trackerId);
-        if ($trackerInfo) {
-            $trackerInfo->updateStatusFromCandidates();
-        }
-
+            
+            $trackerInfo = TrackerInfo::find($trackerId);
+            if ($trackerInfo) {
+                $trackerInfo->updateStatusFromCandidates();
+            }
+            
         return redirect()->route('tracker.info', $trackerId)->with('success', 'Pipeline status updated successfully.');
     }
 
@@ -789,11 +972,11 @@ class TrackerController extends Controller
         $trackerCandidate->update(['current_status_id' => $newStatusId]);
         $trackerCandidate->load('status');
 
-        $trackerInfo = TrackerInfo::find($trackerId);
-        if ($trackerInfo) {
-            $trackerInfo->updateStatusFromCandidates();
-        }
-
+            $trackerInfo = TrackerInfo::find($trackerId);
+            if ($trackerInfo) {
+                $trackerInfo->updateStatusFromCandidates();
+            }
+            
         return $this->checklistJsonResponse($trackerCandidate, $pipeline, $hasResume, $cascaded);
     }
 
@@ -851,6 +1034,7 @@ class TrackerController extends Controller
             'client_confirmation_date', 'offer_extended_date',
             'background_check', 'candidate_project_start_date',
             'final_status_placement_completion', 'placement_completion_date',
+            'recruiter_notes',
         ];
 
         $data = [];
@@ -902,7 +1086,7 @@ class TrackerController extends Controller
             return $trackerCandidate->pipelineStatus->fresh();
         }
 
-        $data['tracker_candidate_id'] = $trackerCandidate->id;
+            $data['tracker_candidate_id'] = $trackerCandidate->id;
         $data['candidate_identified'] = $data['candidate_identified'] ?? true;
 
         return CandidatePipelineStatus::create($data);
@@ -1023,7 +1207,7 @@ class TrackerController extends Controller
         bool $hasResume
     ): int {
         if ($pipeline->final_status_placement_completion === 'Confirmed') {
-            $placementId = JobStatus::where('status', 'Candidate Placement Confirmed')->value('id');
+            $placementId = JobStatus::placementCompletedId();
             if ($placementId) {
                 return (int) $placementId;
             }

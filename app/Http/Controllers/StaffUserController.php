@@ -4,10 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Models\StaffUser;
 use App\Models\UserLogin;
+use App\Services\Storage\ToolStorage;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
 
 class StaffUserController extends Controller
 {
@@ -39,7 +39,7 @@ class StaffUserController extends Controller
         $rules = [
             'username' => 'required|string|max:255|unique:user_login,username',
             'password' => 'required|string|min:8|confirmed',
-            'profile_photo' => 'nullable|image|max:2048',
+            'profile_photo' => 'nullable|file|mimes:jpg,jpeg,png|max:2048',
             'date_of_birth' => 'nullable|date',
             'phone_number' => 'nullable|string|max:50',
             'email' => ['nullable', 'email', 'max:255', 'regex:/@rinfinite\.com$/i'],
@@ -102,7 +102,7 @@ class StaffUserController extends Controller
         $request->validate([
             'username' => 'required|string|max:255|unique:staff_users,username,' . $id . '|unique:user_login,username,' . ($loginId ?? 'NULL'),
             'password' => ($needsLogin ? 'required' : 'nullable') . '|string|min:8|confirmed',
-            'profile_photo' => 'nullable|image|max:2048',
+            'profile_photo' => 'nullable|file|mimes:jpg,jpeg,png|max:2048',
             'date_of_birth' => 'nullable|date',
             'phone_number' => 'nullable|string|max:50',
             'email' => ['nullable', 'email', 'max:255', 'regex:/@rinfinite\.com$/i'],
@@ -147,13 +147,7 @@ class StaffUserController extends Controller
     {
         $user = StaffUser::with('loginAccount')->findOrFail($id);
 
-        if ($user->profile_photo) {
-            $path = $user->profile_photo;
-            if (str_contains($path, 'http')) {
-                $path = preg_replace('/^.*\/object\/(?:public|sign)\/[^\/]+\//', '', $path);
-            }
-            Storage::disk('supabase')->delete($path);
-        }
+        ToolStorage::deleteIfExists($user->profile_photo);
 
         DB::transaction(function () use ($user) {
             $user->loginAccount?->delete();
@@ -172,19 +166,12 @@ class StaffUserController extends Controller
         $data = $request->only(['username', 'email', 'date_of_birth', 'phone_number', 'remarks']);
 
         if ($request->hasFile('profile_photo')) {
-            if ($existing?->profile_photo) {
-                $oldPath = $existing->profile_photo;
-                if (str_contains($oldPath, 'http')) {
-                    $oldPath = preg_replace('/^.*\/object\/(?:public|sign)\/[^\/]+\//', '', $oldPath);
-                }
-                Storage::disk('supabase')->delete($oldPath);
-            }
-
-            $data['profile_photo'] = $request->file('profile_photo')->store('profile_photos', 'supabase');
-        }
-
-        if (isset($data['profile_photo']) && str_contains((string) $data['profile_photo'], 'http')) {
-            unset($data['profile_photo']);
+            $username = $request->input('username', $existing?->username ?? 'user');
+            $data['profile_photo'] = ToolStorage::storeUserProfilePhoto(
+                $request->file('profile_photo'),
+                $username,
+                $existing?->profile_photo
+            );
         }
 
         return $data;

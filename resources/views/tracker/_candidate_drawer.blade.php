@@ -1,4 +1,8 @@
 {{-- Candidate management slide-over drawer (Checklist | Pipeline | Journey) --}}
+@php
+    $jobStatusMap = ($jobStatuses ?? collect())->keyBy('id');
+    $statusLabel = fn (int $id, string $fallback = '') => $jobStatusMap->get($id)?->status ?? $fallback;
+@endphp
 <style>
     /* ── Overlay & panel: always mounted, animated via visibility/opacity/transform ── */
     .drawer-overlay {
@@ -58,6 +62,22 @@
         transition: opacity 0.2s ease;
     }
     .drawer-head .drawer-sub { font-size: 12px; opacity: .75; margin-top: 4px; }
+    .drawer-candidate-meta {
+        margin-top: 10px; padding: 10px 12px; border-radius: 8px;
+        background: rgba(255,255,255,.1); font-size: 11px; line-height: 1.45;
+        display: none;
+    }
+    .drawer-candidate-meta.is-visible { display: block; }
+    .drawer-candidate-meta strong { display: block; font-size: 10px; text-transform: uppercase; letter-spacing: .04em; opacity: .7; margin-bottom: 2px; }
+    .drawer-notes-block {
+        margin-top: 14px; padding: 12px; border: 1px solid var(--c-border);
+        border-radius: 8px; background: #f9fafb;
+    }
+    .drawer-notes-block label { display: block; font-size: 11px; font-weight: 700; color: var(--c-primary); margin-bottom: 6px; }
+    .drawer-notes-block textarea {
+        width: 100%; min-height: 72px; padding: 8px 10px; border: 1px solid var(--c-border);
+        border-radius: 6px; font-size: 12px; resize: vertical; font-family: inherit;
+    }
     .drawer-close {
         background: rgba(255,255,255,.15); border: none; color: #fff;
         width: 32px; height: 32px; border-radius: 8px; cursor: pointer; font-size: 20px;
@@ -340,6 +360,7 @@
                 <div>
                     <h3 id="drawerCandidateName">Candidate</h3>
                     <div class="drawer-sub" id="drawerCandidateEmail"></div>
+                    <div id="drawerCandidateMeta" class="drawer-candidate-meta"></div>
                 </div>
                 <button type="button" class="drawer-close" onclick="closeCandidateDrawer()" aria-label="Close">&times;</button>
             </div>
@@ -377,9 +398,9 @@
                     @csrf
                     @method('PUT')
                     <div class="pipe-stepper">
-                        <div class="pipe-step" data-stage="2">
+                        <div class="pipe-step" data-stage="3">
                             <span class="pipe-step-dot"></span>
-                            <div class="pipe-step-head">Resume Review</div>
+                            <div class="pipe-step-head">{{ $statusLabel(3, 'Resume Reviewed') }}</div>
                             <div class="pipe-step-body">
                                 <div class="form-row">
                                     <div class="form-field">
@@ -396,9 +417,9 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="pipe-step" data-stage="3">
+                        <div class="pipe-step" data-stage="4">
                             <span class="pipe-step-dot"></span>
-                            <div class="pipe-step-head">Screening Call</div>
+                            <div class="pipe-step-head">{{ $statusLabel(4, 'Screening Call') }}</div>
                             <div class="pipe-step-body">
                                 <div class="form-row">
                                     <div class="form-field">
@@ -416,9 +437,9 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="pipe-step" data-stage="4">
+                        <div class="pipe-step" data-stage="5">
                             <span class="pipe-step-dot"></span>
-                            <div class="pipe-step-head">Shortlisting & Submission</div>
+                            <div class="pipe-step-head">{{ $statusLabel(5, 'Shortlisted') }} &amp; {{ $statusLabel(6, 'Submitted to client') }}</div>
                             <div class="pipe-step-body">
                                 <div class="form-field checkbox-field">
                                     <label><input type="checkbox" id="d_candidate_shortlisted" name="candidate_shortlisted" value="1"> Shortlisted</label>
@@ -432,9 +453,9 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="pipe-step" data-stage="6">
+                        <div class="pipe-step" data-stage="7">
                             <span class="pipe-step-dot"></span>
-                            <div class="pipe-step-head">Internal Prep</div>
+                            <div class="pipe-step-head">{{ $statusLabel(7, 'Internal Prep') }}</div>
                             <div class="pipe-step-body">
                                 <div class="form-row">
                                     <div class="form-field">
@@ -452,9 +473,9 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="pipe-step" data-stage="7">
+                        <div class="pipe-step" data-stage="8">
                             <span class="pipe-step-dot"></span>
-                            <div class="pipe-step-head">Client Resume Review</div>
+                            <div class="pipe-step-head">{{ $statusLabel(8, 'Client Review') }}</div>
                             <div class="pipe-step-body">
                                 <div class="form-field">
                                     <label>Outcome</label>
@@ -466,9 +487,9 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="pipe-step" data-stage="8">
+                        <div class="pipe-step" data-stage="9">
                             <span class="pipe-step-dot"></span>
-                            <div class="pipe-step-head">Interview Round 1</div>
+                            <div class="pipe-step-head">{{ $statusLabel(9, 'Round 1') }}</div>
                             <div class="pipe-step-body">
                                 <div class="form-field">
                                     <label>Date</label>
@@ -476,9 +497,9 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="pipe-step" data-stage="9">
+                        <div class="pipe-step" data-stage="10">
                             <span class="pipe-step-dot"></span>
-                            <div class="pipe-step-head">Interview Round 2</div>
+                            <div class="pipe-step-head">{{ $statusLabel(10, 'Round 2') }}</div>
                             <div class="pipe-step-body">
                                 <div class="form-field">
                                     <label>Date</label>
@@ -486,9 +507,9 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="pipe-step" data-stage="10">
+                        <div class="pipe-step" data-stage="11">
                             <span class="pipe-step-dot"></span>
-                            <div class="pipe-step-head">Additional Rounds</div>
+                            <div class="pipe-step-head">{{ $statusLabel(11, 'Additional Round') }}</div>
                             <div class="pipe-step-body">
                                 <div class="form-field">
                                     <label>Additional rounds?</label>
@@ -499,9 +520,9 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="pipe-step" data-stage="11">
+                        <div class="pipe-step" data-stage="12">
                             <span class="pipe-step-dot"></span>
-                            <div class="pipe-step-head">Client Decision</div>
+                            <div class="pipe-step-head">{{ $statusLabel(12, 'Client Decision Awaited') }}</div>
                             <div class="pipe-step-body">
                                 <div class="form-row">
                                     <div class="form-field">
@@ -511,6 +532,7 @@
                                             <option value="Selected">Selected</option>
                                             <option value="Rejected">Rejected</option>
                                             <option value="On Hold">On Hold</option>
+                                            <option value="Selected but declined the offer">Selected but declined the offer</option>
                                         </select>
                                     </div>
                                     <div class="form-field" id="client_decision_date_container" style="display:none;">
@@ -520,9 +542,9 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="pipe-step" data-stage="12">
+                        <div class="pipe-step" data-stage="13">
                             <span class="pipe-step-dot"></span>
-                            <div class="pipe-step-head">Client Confirmation</div>
+                            <div class="pipe-step-head">{{ $statusLabel(13, 'Client Confirmation Recieved') }}</div>
                             <div class="pipe-step-body">
                                 <div class="form-row">
                                     <div class="form-field checkbox-field">
@@ -535,9 +557,9 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="pipe-step" data-stage="13">
+                        <div class="pipe-step" data-stage="14">
                             <span class="pipe-step-dot"></span>
-                            <div class="pipe-step-head">Offer Extended</div>
+                            <div class="pipe-step-head">{{ $statusLabel(14, 'Offer Extended to Candidate') }}</div>
                             <div class="pipe-step-body">
                                 <div class="form-row">
                                     <div class="form-field checkbox-field">
@@ -550,9 +572,9 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="pipe-step" data-stage="14">
+                        <div class="pipe-step" data-stage="15">
                             <span class="pipe-step-dot"></span>
-                            <div class="pipe-step-head">Background Check</div>
+                            <div class="pipe-step-head">{{ $statusLabel(15, 'Background Check') }}</div>
                             <div class="pipe-step-body">
                                 <div class="form-field">
                                     <label>Status</label>
@@ -564,9 +586,9 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="pipe-step" data-stage="15">
+                        <div class="pipe-step" data-stage="16">
                             <span class="pipe-step-dot"></span>
-                            <div class="pipe-step-head">Project Start</div>
+                            <div class="pipe-step-head">{{ $statusLabel(16, 'Candidate Project Start') }}</div>
                             <div class="pipe-step-body">
                                 <div class="form-field">
                                     <label>Start Date</label>
@@ -574,9 +596,9 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="pipe-step" data-stage="16">
+                        <div class="pipe-step" data-stage="17">
                             <span class="pipe-step-dot"></span>
-                            <div class="pipe-step-head">Placement Completion</div>
+                            <div class="pipe-step-head">{{ $statusLabel(17, 'Candidate Placement Completed') }}</div>
                             <div class="pipe-step-body">
                                 <div class="form-row">
                                     <div class="form-field">
@@ -592,6 +614,10 @@
                                     </div>
                                 </div>
                             </div>
+                        </div>
+                        <div class="drawer-notes-block">
+                            <label for="d_recruiter_notes">Recruiter Notes</label>
+                            <textarea id="d_recruiter_notes" name="recruiter_notes" placeholder="Availability, other offers, call logs…"></textarea>
                         </div>
                     </div>
                 </form>
@@ -637,6 +663,8 @@
 <script>
 const TRACKER_ID = {{ $trackerInfo->id }};
 const STAGE_COLORS = @json($stageColors);
+const JOB_STATUS_LABELS = @json($jobStatuses->pluck('status', 'id'));
+const jobStatusLabel = (id, fallback = '') => JOB_STATUS_LABELS[id] || fallback;
 const CHECKLIST_ORDER = @json(CandidatePipelineService::CHECKLIST_FIELD_ORDER);
 const CHECKLIST_LABELS = @json($checklistLabels);
 const CHECKLIST_PIPELINE_CARDS = ['resume_reviewed', 'screening_call', 'submitted_to_client'];
@@ -671,6 +699,19 @@ function openCandidateDrawer(tcId) {
     document.getElementById('drawerCandidateName').textContent = drawerRow.dataset.candidateName || 'Candidate';
     document.getElementById('drawerCandidateEmail').textContent =
         drawerRow.querySelector('.candidate-email')?.textContent?.trim() || '';
+
+    const metaEl = document.getElementById('drawerCandidateMeta');
+    const metaParts = [];
+    if (drawerRow.dataset.payRate) metaParts.push('<div><strong>Pay Rate</strong>' + escapeHtml(drawerRow.dataset.payRate) + '</div>');
+    if (drawerRow.dataset.placementPayRate) metaParts.push('<div><strong>Placement Pay</strong>' + escapeHtml(drawerRow.dataset.placementPayRate) + '</div>');
+    if (drawerRow.dataset.candidateSummary) metaParts.push('<div><strong>Summary</strong>' + escapeHtml(drawerRow.dataset.candidateSummary) + '</div>');
+    if (metaParts.length) {
+        metaEl.innerHTML = metaParts.join('');
+        metaEl.classList.add('is-visible');
+    } else {
+        metaEl.innerHTML = '';
+        metaEl.classList.remove('is-visible');
+    }
 
     document.getElementById('drawerPipelineForm').action =
         '/tracker/info/' + TRACKER_ID + '/candidates/' + tcId + '/pipeline';
@@ -1234,6 +1275,7 @@ function hydrateRowFromPipelineApi(row, data) {
     row.dataset.projectStart = data.candidate_project_start_date || '';
     row.dataset.finalStatus = data.final_status_placement_completion || '';
     row.dataset.placementDate = data.placement_completion_date || '';
+    row.dataset.recruiterNotes = data.recruiter_notes || '';
 
     if (data.checklist_progress !== undefined) {
         row.dataset.checklistProgress = String(data.checklist_progress);
@@ -1317,6 +1359,7 @@ function populateDrawerPipelineForm(row) {
     setDrawerVal('d_candidate_project_start_date', row.dataset.projectStart || '');
     setDrawerVal('d_final_status_placement_completion', row.dataset.finalStatus || 'Confirmed');
     setDrawerVal('d_placement_completion_date', row.dataset.placementDate || '');
+    setDrawerVal('d_recruiter_notes', row.dataset.recruiterNotes || '');
 
     toggleDrawerDate('resume_reviewed_date', document.getElementById('d_resume_reviewed_by_recruiter').value);
     toggleDrawerDate('recruiter_screening_call_date', document.getElementById('d_recruiter_screening_call').value);
@@ -1350,21 +1393,22 @@ function renderDrawerTimeline(row) {
     const tl = document.getElementById('drawerTimeline');
     tl.innerHTML = '';
     const stages = [
-        { id: 2, title: 'Candidate Identified', date: null, desc: 'Added to job pipeline.' },
-        { id: 3, title: 'Resume Reviewed', date: row.dataset.resumeReviewedDate, desc: row.dataset.resumeReviewed === 'Completed' ? 'Review completed.' : 'Pending.' },
-        { id: 4, title: 'Screening Call', date: row.dataset.recruiterScreeningDate, desc: row.dataset.recruiterScreening === 'Completed' ? 'Call completed.' : 'Pending.' },
-        { id: 5, title: 'Shortlisted', date: null, desc: row.dataset.shortlisted === '1' ? 'Shortlisted.' : 'Not shortlisted.' },
-        { id: 6, title: 'Submitted to Client', date: null, desc: row.dataset.resumeSubmitted === 'Submitted' ? 'Submitted.' : 'Not submitted.' },
-        { id: 7, title: 'Internal Prep', date: row.dataset.radixPrepDate, desc: row.dataset.radixPrep || 'N/A' },
-        { id: 8, title: 'Client Review', date: null, desc: row.dataset.clientReview || 'Pending.' },
-        { id: 9, title: 'Interview Round 1', date: row.dataset.interviewRound1, desc: row.dataset.interviewRound1 ? 'Scheduled.' : 'Not scheduled.' },
-        { id: 10, title: 'Interview Round 2', date: row.dataset.interviewRound2, desc: row.dataset.interviewRound2 ? 'Scheduled.' : 'Not scheduled.' },
-        { id: 12, title: 'Client Decision', date: row.dataset.clientDecisionDate, desc: row.dataset.clientDecision || 'Awaiting.' },
-        { id: 13, title: 'Client Confirmation', date: row.dataset.confirmationDate, desc: row.dataset.confirmationReceived === '1' ? 'Received.' : 'Pending.' },
-        { id: 14, title: 'Offer Extended', date: row.dataset.offerExtendedDate, desc: row.dataset.offerExtended === '1' ? 'Extended.' : 'Pending.' },
-        { id: 15, title: 'Background Check', date: null, desc: row.dataset.backgroundCheck || 'Not started.' },
-        { id: 16, title: 'Project Start', date: row.dataset.projectStart, desc: row.dataset.projectStart ? 'Date set.' : 'Pending.' },
-        { id: 17, title: 'Placement Confirmed', date: row.dataset.placementDate, desc: 'Placement workflow.' },
+        { id: 2, title: jobStatusLabel(2, 'Candidate Identified'), date: null, desc: 'Added to job pipeline.' },
+        { id: 3, title: jobStatusLabel(3), date: row.dataset.resumeReviewedDate, desc: row.dataset.resumeReviewed === 'Completed' ? 'Review completed.' : 'Pending.' },
+        { id: 4, title: jobStatusLabel(4), date: row.dataset.recruiterScreeningDate, desc: row.dataset.recruiterScreening === 'Completed' ? 'Call completed.' : 'Pending.' },
+        { id: 5, title: jobStatusLabel(5), date: null, desc: row.dataset.shortlisted === '1' ? 'Shortlisted.' : 'Not shortlisted.' },
+        { id: 6, title: jobStatusLabel(6), date: null, desc: row.dataset.resumeSubmitted === 'Submitted' ? 'Submitted.' : 'Not submitted.' },
+        { id: 7, title: jobStatusLabel(7), date: row.dataset.radixPrepDate, desc: row.dataset.radixPrep || 'N/A' },
+        { id: 8, title: jobStatusLabel(8), date: null, desc: row.dataset.clientReview || 'Pending.' },
+        { id: 9, title: jobStatusLabel(9), date: row.dataset.interviewRound1, desc: row.dataset.interviewRound1 ? 'Scheduled.' : 'Not scheduled.' },
+        { id: 10, title: jobStatusLabel(10), date: row.dataset.interviewRound2, desc: row.dataset.interviewRound2 ? 'Scheduled.' : 'Not scheduled.' },
+        { id: 11, title: jobStatusLabel(11), date: null, desc: row.dataset.additionalRounds === '1' ? 'Additional rounds.' : 'No extra rounds.' },
+        { id: 12, title: jobStatusLabel(12), date: row.dataset.clientDecisionDate, desc: row.dataset.clientDecision || 'Awaiting.' },
+        { id: 13, title: jobStatusLabel(13), date: row.dataset.confirmationDate, desc: row.dataset.confirmationReceived === '1' ? 'Received.' : 'Pending.' },
+        { id: 14, title: jobStatusLabel(14), date: row.dataset.offerExtendedDate, desc: row.dataset.offerExtended === '1' ? 'Extended.' : 'Pending.' },
+        { id: 15, title: jobStatusLabel(15), date: null, desc: row.dataset.backgroundCheck || 'Not started.' },
+        { id: 16, title: jobStatusLabel(16), date: row.dataset.projectStart, desc: row.dataset.projectStart ? 'Date set.' : 'Pending.' },
+        { id: 17, title: jobStatusLabel(17), date: row.dataset.placementDate, desc: 'Placement workflow.' },
     ];
     const curId = parseInt(row.dataset.currentStatusId || '2', 10);
     stages.forEach((stage, i) => {

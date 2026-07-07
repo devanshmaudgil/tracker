@@ -40,6 +40,7 @@ class CandidatePipelineStatus extends Model
         'final_status_placement_completion',
         'placement_completion_date',
         'interview_transcript',
+        'recruiter_notes',
     ];
 
     protected function casts(): array

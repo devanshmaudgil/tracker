@@ -34,9 +34,11 @@ Route::middleware('auth')->group(function () {
     Route::get('/dashboard/data', [DashboardController::class, 'data'])->name('dashboard.data');
     Route::get('/dashboard/kpi/{kpi}', [DashboardController::class, 'kpiDetail'])->name('dashboard.kpi');
     Route::get('/dashboard/export', [DashboardController::class, 'export'])->name('dashboard.export');
+    Route::get('/dashboard/positions', [DashboardController::class, 'positions'])->name('dashboard.positions');
     Route::get('/calendar/holidays', [CalendarController::class, 'holidays'])->name('calendar.holidays');
 
     Route::get('/tracker/info', [TrackerController::class, 'index'])->name('tracker.index');
+    Route::get('/tracker/attention/{type}', [TrackerController::class, 'attentionDetail'])->name('tracker.attention');
     Route::get('/tracker/export', [TrackerController::class, 'exportAll'])->name('tracker.export_all');
     Route::get('/tracker/import', [TrackerController::class, 'showImportForm'])->name('tracker.import');
     Route::post('/tracker/import', [TrackerController::class, 'importExcel'])->name('tracker.import.process');
@@ -46,6 +48,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/tracker/info/{id}/json', [TrackerController::class, 'show'])->name('tracker.show');
     Route::get('/tracker/info/{id}', [TrackerController::class, 'info'])->name('tracker.info');
     Route::put('/tracker/info/{id}', [TrackerController::class, 'update'])->name('tracker.update');
+    Route::patch('/tracker/info/{id}/remarks', [TrackerController::class, 'updateRemarks'])->name('tracker.remarks.update');
     Route::delete('/tracker/info/{id}', [TrackerController::class, 'destroy'])->name('tracker.destroy');
     Route::get('/tracker/info/{id}/export', [TrackerController::class, 'export'])->name('tracker.export');
     
@@ -69,11 +72,11 @@ Route::middleware('auth')->group(function () {
     Route::put('/clients/info/{id}', [ClientController::class, 'update'])->name('clients.info.update');
     Route::delete('/clients/info/{id}', [ClientController::class, 'destroy'])->name('clients.info.destroy');
     
-    Route::get('/region', [RegionController::class, 'index'])->name('regions.index');
-    Route::post('/regions', [RegionController::class, 'store'])->name('regions.store');
-    Route::get('/regions/{id}/edit', [RegionController::class, 'edit'])->name('regions.edit');
-    Route::put('/regions/{id}', [RegionController::class, 'update'])->name('regions.update');
-    Route::delete('/regions/{id}', [RegionController::class, 'destroy'])->name('regions.destroy');
+    Route::get('/locations', [RegionController::class, 'index'])->name('locations.index');
+    Route::post('/locations', [RegionController::class, 'store'])->name('locations.store');
+    Route::get('/locations/{id}/edit', [RegionController::class, 'edit'])->name('locations.edit');
+    Route::put('/locations/{id}', [RegionController::class, 'update'])->name('locations.update');
+    Route::delete('/locations/{id}', [RegionController::class, 'destroy'])->name('locations.destroy');
     
     Route::get('/candidate/info', [CandidateController::class, 'index'])->name('candidates.index');
     Route::post('/candidates', [CandidateController::class, 'store'])->name('candidates.store');

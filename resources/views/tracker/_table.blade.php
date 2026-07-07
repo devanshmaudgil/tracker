@@ -1,28 +1,52 @@
 @forelse($trackerInfos as $info)
+    @php
+        $regionLabel = fn ($region) => $region->city ? $region->city . ', ' . $region->region : $region->region;
+        if ($info->regions->isNotEmpty()) {
+            $locationText = $info->regions->map($regionLabel)->implode(' | ');
+        } elseif ($info->region) {
+            $locationText = $regionLabel($info->region);
+        } else {
+            $locationText = $info->country ?? '-';
+        }
+    @endphp
     <tr data-id="{{ $info->id }}">
         <td><span class="cell-id">#{{ $info->id }}</span></td>
         <td>{{ $info->month->month ?? '-' }}</td>
         <td>{{ $info->prd ? $info->prd->format('d-M-Y') : '-' }}</td>
         <td>{{ $info->submission_deadline ? $info->submission_deadline->format('d-M-Y') : '-' }}</td>
-        <td><span class="cell-client">{{ $info->client->client ?? '-' }}</span></td>
         <td>
-            @if($info->region)
-                @if($info->region->city)
-                    {{ $info->region->city }}, {{ $info->region->region }}
-                @else
-                    {{ $info->region->region }}
-                @endif
-            @else
-                -
+            <span class="cell-position">{{ $info->position ?? '-' }}</span>
+            @php
+                $placedCount = $info->placed_candidates_count ?? 0;
+                $activeCount = $info->active_candidates_count ?? 0;
+            @endphp
+            @if($placedCount > 0 || $activeCount > 0)
+                <span class="cand-mix" title="Candidate pipeline for this requisition">
+                    @if($placedCount > 0)<span class="cand-mix__placed">{{ $placedCount }} placed</span>@endif
+                    @if($placedCount > 0 && $activeCount > 0)<span class="cand-mix__dot">·</span>@endif
+                    @if($activeCount > 0)<span class="cand-mix__active">{{ $activeCount }} in pipeline</span>@endif
+                </span>
             @endif
         </td>
-        <td><span class="cell-position">{{ $info->position ?? '-' }}</span></td>
-        <td>{{ $info->leadRecruiter->username ?? '-' }}</td>
+        <td>
+            <span class="cell-location" title="{{ $locationText }}">{{ $locationText }}</span>
+        </td>
+        <td><span class="cell-client">{{ $info->client->client ?? '-' }}</span></td>
+        <td>{{ $info->isUnserved() ? '-' : ($info->leadRecruiter->username ?? '-') }}</td>
         <td title="{{ $info->jobStatus->status ?? 'Demand Raised' }}">
             <span class="status-badge">{{ $info->jobStatus->status_initial ?? 'DR' }}</span>
         </td>
         <td>
             <div class="action-buttons">
+                <button type="button"
+                    class="action-btn action-remarks{{ $info->remarks ? ' has-remarks' : '' }}"
+                    title="{{ $info->remarks ? 'Edit remarks' : 'Add remarks' }}"
+                    data-remarks-btn
+                    data-id="{{ $info->id }}"
+                    data-position="{{ $info->position ?? 'Position' }}"
+                    data-remarks="{{ e($info->remarks ?? '') }}">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                </button>
                 <a href="{{ route('tracker.info', $info->id) }}" class="action-btn action-view" title="View Details">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
                 </a>

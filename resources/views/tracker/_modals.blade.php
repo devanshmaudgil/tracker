@@ -63,6 +63,26 @@
                 </div>
 
                 <div class="form-group">
+                    <label for="create_placement_pay_rate" style="font-size: 12px; font-weight: 600;">Placement Pay Rate</label>
+                    <input type="text" id="create_placement_pay_rate" name="placement_pay_rate" placeholder="e.g., 30 LPA" style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 12px;">
+                </div>
+
+                <div class="form-group" style="grid-column: span 2;">
+                    <label for="create_location_text" style="font-size: 12px; font-weight: 600;">Location (free text)</label>
+                    <input type="text" id="create_location_text" name="location_text" placeholder="e.g., Hyderabad, India" style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 12px;">
+                </div>
+
+                <div class="form-group" style="grid-column: span 2;">
+                    <label for="create_summary" style="font-size: 12px; font-weight: 600;">Candidate Summary</label>
+                    <textarea id="create_summary" name="summary" rows="2" placeholder="Skill, mode, experience, notice…" style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 12px; resize: vertical;"></textarea>
+                </div>
+
+                <div class="form-group" style="grid-column: span 2;">
+                    <label for="create_remarks" style="font-size: 12px; font-weight: 600;">Remarks</label>
+                    <textarea id="create_remarks" name="remarks" rows="2" placeholder="Internal notes about this candidate…" style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 12px; resize: vertical;"></textarea>
+                </div>
+
+                <div class="form-group">
                     <label for="create_agency_name" style="font-size: 12px; font-weight: 600;">Agency Name</label>
                     <input type="text" id="create_agency_name" name="agency_name" style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 12px;">
                 </div>

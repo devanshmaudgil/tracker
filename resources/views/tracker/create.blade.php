@@ -38,29 +38,7 @@
             @enderror
         </div>
 
-        <div class="form-group">
-            <label for="region_id">Job Location</label>
-            <div style="position: relative;">
-                <input type="text" id="region_search" placeholder="Search job location..." autocomplete="off" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
-                <select id="region_id" name="region_id" style="display: none;">
-                    <option value="">Select Job Location</option>
-                    @foreach($regions as $region)
-                        <option value="{{ $region->id }}" data-region="{{ $region->region }}" data-city="{{ $region->city ?? '' }}" {{ old('region_id') == $region->id ? 'selected' : '' }}>
-                            @if($region->city)
-                                {{ $region->city }}, {{ $region->region }}
-                            @else
-                                {{ $region->region }}
-                            @endif
-                        </option>
-                    @endforeach
-                </select>
-                <div id="region_dropdown" style="display: none; position: absolute; top: 100%; left: 0; right: 0; background: white; border: 1px solid #ddd; border-top: none; border-radius: 0 0 4px 4px; max-height: 200px; overflow-y: auto; z-index: 1000; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-                </div>
-            </div>
-            @error('region_id')
-                <div style="color: #dc3545; margin-top: 5px; font-size: 14px;">{{ $message }}</div>
-            @enderror
-        </div>
+        @include('tracker._region_multiselect')
 
         <div class="form-group">
             <label for="type_of_job">Type of Job</label>
@@ -89,6 +67,7 @@
                 <option value="">Select Priority</option>
                 <option value="Urgent" {{ old('priority') == 'Urgent' ? 'selected' : '' }}>Urgent</option>
                 <option value="High" {{ old('priority') == 'High' ? 'selected' : '' }}>High</option>
+                <option value="Intermediate" {{ old('priority') == 'Intermediate' ? 'selected' : '' }}>Intermediate</option>
                 <option value="Medium" {{ old('priority') == 'Medium' ? 'selected' : '' }}>Medium</option>
                 <option value="Low" {{ old('priority') == 'Low' ? 'selected' : '' }}>Low</option>
             </select>
@@ -98,9 +77,17 @@
         </div>
 
         <div class="form-group">
-            <label for="submission_deadline">Submission Deadline</label>
+            <label for="submission_deadline">Target Date</label>
             <input type="date" id="submission_deadline" name="submission_deadline" value="{{ old('submission_deadline') }}" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
             @error('submission_deadline')
+                <div style="color: #dc3545; margin-top: 5px; font-size: 14px;">{{ $message }}</div>
+            @enderror
+        </div>
+
+        <div class="form-group">
+            <label for="notes">Job Notes</label>
+            <textarea id="notes" name="notes" rows="3" placeholder="Additional remarks about this requisition…" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">{{ old('notes') }}</textarea>
+            @error('notes')
                 <div style="color: #dc3545; margin-top: 5px; font-size: 14px;">{{ $message }}</div>
             @enderror
         </div>
@@ -119,6 +106,7 @@
                 <option value="">Select Country</option>
                 <option value="Canada" {{ old('cf') == 'Canada' ? 'selected' : '' }}>Canada</option>
                 <option value="USA" {{ old('cf') == 'USA' ? 'selected' : '' }}>USA</option>
+                <option value="India" {{ old('cf') == 'India' ? 'selected' : '' }}>India</option>
             </select>
             @error('cf')
                 <div style="color: #dc3545; margin-top: 5px; font-size: 14px;">{{ $message }}</div>
@@ -187,93 +175,6 @@
         font-weight: 600;
         color: #0a2d29;
     }
-    
-    #region_dropdown div:hover {
-        background-color: #f1cd86 !important;
-        color: #0a2d29;
-    }
-
-    #region_search:focus {
-        outline: none;
-        border-color: #f1cd86;
-        box-shadow: 0 0 0 3px rgba(241, 205, 134, 0.1);
-    }
-    
-    #region_dropdown div {
-        text-align: left;
-    }
 </style>
-
-<script>
-    // Searchable dropdown for regions
-    const regionSearch = document.getElementById('region_search');
-    const regionSelect = document.getElementById('region_id');
-    const regionDropdown = document.getElementById('region_dropdown');
-    const allRegionOptions = Array.from(regionSelect.querySelectorAll('option'));
-
-    // Set initial value if old() has region_id
-    @if(old('region_id'))
-        const selectedRegion = regionSelect.querySelector('option[value="{{ old('region_id') }}"]');
-        if (selectedRegion) {
-            regionSearch.value = selectedRegion.textContent.trim();
-        }
-    @endif
-
-    function filterRegions(searchTerm) {
-        const filtered = allRegionOptions.filter(option => {
-            const regionName = option.dataset.region || '';
-            const cityName = option.dataset.city || '';
-            const displayText = option.textContent.trim();
-            const searchLower = searchTerm.toLowerCase();
-            
-            return regionName.toLowerCase().includes(searchLower) ||
-                   cityName.toLowerCase().includes(searchLower) ||
-                   displayText.toLowerCase().includes(searchLower);
-        });
-
-        regionDropdown.innerHTML = '';
-        if (filtered.length > 0 && searchTerm.length > 0) {
-            regionDropdown.style.display = 'block';
-            filtered.forEach(option => {
-                const div = document.createElement('div');
-                div.textContent = option.textContent;
-                div.style.padding = '8px 12px';
-                div.style.cursor = 'pointer';
-                div.style.borderBottom = '1px solid #eee';
-                div.style.textAlign = 'left';
-                div.addEventListener('mouseenter', function() {
-                    this.style.backgroundColor = '#f5f5f5';
-                });
-                div.addEventListener('mouseleave', function() {
-                    this.style.backgroundColor = 'white';
-                });
-                div.addEventListener('click', function() {
-                    regionSearch.value = option.textContent;
-                    regionSelect.value = option.value;
-                    regionDropdown.style.display = 'none';
-                });
-                regionDropdown.appendChild(div);
-            });
-        } else {
-            regionDropdown.style.display = 'none';
-        }
-    }
-
-    regionSearch.addEventListener('input', function() {
-        filterRegions(this.value);
-    });
-
-    regionSearch.addEventListener('focus', function() {
-        if (this.value.length > 0) {
-            filterRegions(this.value);
-        }
-    });
-
-    document.addEventListener('click', function(event) {
-        if (!event.target.closest('#region_search') && !event.target.closest('#region_dropdown')) {
-            regionDropdown.style.display = 'none';
-        }
-    });
-</script>
 @endsection
 

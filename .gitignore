@@ -16,6 +16,11 @@
 /public/build
 /public/hot
 /public/storage
+/public/Tool Storage
+# Local document store — ignore uploads, keep folder skeleton (.gitkeep)
+/Tool Storage/**
+!/Tool Storage/**/
+!/Tool Storage/**/.gitkeep
 /storage/*.key
 /storage/pail
 /vendor

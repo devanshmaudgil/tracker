@@ -183,6 +183,8 @@
 
     .candidate-name { font-weight: 700; color: var(--c-primary); font-size: 13px; }
     .candidate-email { color: var(--c-muted); font-size: 11.5px; margin-top: 1px; }
+    .candidate-meta { color: var(--c-muted); font-size: 10.5px; margin-top: 3px; line-height: 1.35; }
+    .candidate-summary { max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
     .stage-badge {
         display: inline-flex; align-items: center; gap: 4px;
@@ -602,10 +604,15 @@
                     <span class="meta-value">{{ $trackerInfo->client->client ?? 'N/A' }}</span>
                 </div>
                 <div class="meta-item">
-                    <span class="meta-label">Location</span>
+                    <span class="meta-label">{{ $trackerInfo->regions->count() > 1 ? 'Locations' : 'Location' }}</span>
                     <span class="meta-value">
-                        @if($trackerInfo->region)
-                            {{ $trackerInfo->region->city ? $trackerInfo->region->city . ', ' : '' }}{{ $trackerInfo->region->region }}
+                        @php
+                            $regionLabel = fn ($region) => $region->city ? $region->city . ', ' . $region->region : $region->region;
+                        @endphp
+                        @if($trackerInfo->regions->isNotEmpty())
+                            {{ $trackerInfo->regions->map($regionLabel)->implode(' | ') }}
+                        @elseif($trackerInfo->region)
+                            {{ $regionLabel($trackerInfo->region) }}
                         @else
                             {{ $trackerInfo->country ?? 'N/A' }}
                         @endif
@@ -620,16 +627,20 @@
                     <span class="meta-value">{{ $trackerInfo->prd ? $trackerInfo->prd->format('d M Y') : 'N/A' }}</span>
                 </div>
                 <div class="meta-item">
-                    <span class="meta-label">Submission Deadline</span>
+                    <span class="meta-label">Target Date</span>
                     <span class="meta-value {{ $trackerInfo->submission_deadline && $trackerInfo->submission_deadline->isPast() ? 'muted' : '' }}">
-                        {{ $trackerInfo->submission_deadline ? $trackerInfo->submission_deadline->format('d M Y') : 'N/A' }}
+                        @if($trackerInfo->submission_deadline)
+                            {{ $trackerInfo->submission_deadline->format('d M Y') }}
+                        @else
+                            N/A
+                        @endif
                         @if($trackerInfo->submission_deadline && $trackerInfo->submission_deadline->isPast())
                             <span style="font-size:11px;color:var(--c-danger);font-weight:700;">(Overdue)</span>
                         @elseif($trackerInfo->submission_deadline && $trackerInfo->submission_deadline->diffInDays(now()) <= 7)
                             <span style="font-size:11px;color:var(--c-warn);font-weight:700;">(Due Soon)</span>
                         @endif
                     </span>
-                </div>
+        </div>
                 <div class="meta-item">
                     <span class="meta-label">Country Fulfillment</span>
                     <span class="meta-value">{{ $trackerInfo->cf ?? 'N/A' }}</span>
@@ -659,8 +670,14 @@
                     <span class="meta-value">{{ $trackerInfo->type_of_job ? ucfirst($trackerInfo->type_of_job) : 'N/A' }}</span>
                 </div>
             </div>
-        </div>
+            @if($trackerInfo->notes)
+                <div style="margin-top:16px;padding:12px 14px;background:#f9fafb;border:1px solid var(--c-border);border-radius:8px;">
+                    <span class="meta-label" style="display:block;margin-bottom:6px;">Job Notes</span>
+                    <p style="margin:0;font-size:13px;line-height:1.55;color:var(--c-text);white-space:pre-wrap;">{{ $trackerInfo->notes }}</p>
+                </div>
+            @endif
     </div>
+</div>
 
     {{-- Pipeline Stats --}}
     <div class="stats-row" style="margin-bottom:20px;">
@@ -690,22 +707,22 @@
         {{-- Assign bar --}}
         <div class="assign-bar">
             <form method="POST" action="{{ route('tracker.candidates.assign', $trackerInfo->id) }}" style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;width:100%;">
-                @csrf
+        @csrf
                 <div class="fg">
                     <label for="candidate_id">Assign Existing Candidate</label>
-                    <select id="candidate_id" name="candidate_id" required>
+            <select id="candidate_id" name="candidate_id" required>
                         <option value="">Select or search candidate…</option>
-                        @foreach($availableCandidates as $candidate)
+                @foreach($availableCandidates as $candidate)
                             @if(!$assignedCandidateIds->contains($candidate->id))
-                                <option value="{{ $candidate->id }}">
-                                    {{ $candidate->full_name }}
+                        <option value="{{ $candidate->id }}">
+                            {{ $candidate->full_name }} 
                                     @if($candidate->email) — {{ $candidate->email }} @endif
                                     @if($candidate->work_status) ({{ $candidate->work_status }}) @endif
-                                </option>
-                            @endif
-                        @endforeach
-                    </select>
-                </div>
+                        </option>
+                    @endif
+                @endforeach
+            </select>
+        </div>
                 <div style="display:flex;gap:8px;align-items:center;padding-bottom:1px;">
                     <button type="submit" class="btn-i btn-primary-i">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
@@ -715,8 +732,8 @@
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>
                         New Candidate
                     </button>
-                </div>
-            </form>
+        </div>
+    </form>
         </div>
 
         {{-- Pipeline table: in-progress + rejected (inline) --}}
@@ -784,12 +801,12 @@
                     </tbody>
                 </table>
             </div>
-        @else
+                                        @else
             <div class="empty-state-box">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
                 <p>No candidates assigned yet. Use the form above to assign or create a candidate.</p>
             </div>
-        @endif
+                                        @endif
     </div>
 
     {{-- Placed Candidates (pipeline completion) — light green ── --}}
@@ -831,6 +848,10 @@
                                     data-placed="1"
                                     data-rejected="0"
                                     data-candidate-name="{{ $tc->candidate->full_name }}"
+                                    data-pay-rate="{{ $tc->candidate->pay_rate ?? '' }}"
+                                    data-placement-pay-rate="{{ $tc->candidate->placement_pay_rate ?? '' }}"
+                                    data-candidate-summary="{{ e($tc->candidate->summary ?? '') }}"
+                                    data-recruiter-notes="{{ $pStatus ? e($pStatus->recruiter_notes ?? '') : '' }}"
                                     data-checklist-progress="100"
                                     data-stage-label="{{ $placementConfirmedLabel }}"
                                     data-current-status-id="{{ $tc->current_status_id }}"
@@ -842,6 +863,12 @@
                                     <td>
                                         <div style="font-weight:700;font-size:13px;color:#065F46;">{{ $tc->candidate->full_name }}</div>
                                         <div class="candidate-email" style="font-size:11px;color:var(--c-muted);">{{ $tc->candidate->email }}</div>
+                                        @if($tc->candidate->pay_rate)
+                                            <div class="candidate-meta">Pay: {{ $tc->candidate->pay_rate }}</div>
+                                    @endif
+                                        @if($tc->candidate->placement_pay_rate)
+                                            <div class="candidate-meta">Placement: {{ $tc->candidate->placement_pay_rate }}</div>
+                                        @endif
                                         <div style="font-size:10px;color:#059669;margin-top:3px;font-weight:600;">Pipeline placement confirmed</div>
                                     </td>
                                     <td style="font-size:12px;color:var(--c-muted);">
@@ -849,14 +876,14 @@
                                     </td>
                                     <td style="font-size:12px;color:var(--c-muted);">
                                         {{ $projectStart ? $projectStart->format('d M Y') : '—' }}
-                                    </td>
-                                    <td>
+                                </td>
+                                <td>
                                         <span class="stage-badge" style="background:#DCFCE7;color:#065F46;border-color:#BBF7D0;">
                                             <span class="dot" style="background:#059669;"></span>
                                             {{ $placementConfirmedLabel }}
-                                        </span>
-                                    </td>
-                                    <td>
+                                    </span>
+                                </td>
+                                <td>
                                         @if($tc->candidate->resume_file_url)
                                             <a href="{{ $tc->candidate->resume_file_url }}" target="_blank" class="btn-i btn-sm-i btn-accent-i" style="text-decoration:none;">CV</a>
                                         @else
@@ -867,20 +894,20 @@
                                         <div style="display:flex;gap:6px;justify-content:center;flex-wrap:wrap;">
                                             <button type="button" class="btn-i btn-sm-i btn-secondary-i" onclick="openCandidateDrawer({{ $tc->id }})">View</button>
                                             <a href="{{ route('tracker.candidates.report.form', ['tracker_id' => $trackerInfo->id, 'tracker_candidate_id' => $tc->id]) }}" class="btn-i btn-sm-i btn-accent-i" style="text-decoration:none;">Report</a>
-                                        </div>
-                                    </td>
-                                </tr>
-                            @endforeach
-                        </tbody>
-                    </table>
-                </div>
-            @else
+                                    </div>
+                                </td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+        </div>
+    @else
                 <div class="empty-state-box" style="padding:32px;">
                     <p style="color:var(--c-muted);font-size:13px;">No placed candidates yet. Complete the pipeline final step — <strong>Placement Completion → Confirmed</strong> — with a placement date.</p>
                 </div>
-            @endif
+    @endif
+</div>
         </div>
-    </div>
 
 </div><!-- /info-page -->
 
@@ -893,7 +920,7 @@
         <div class="modal-head" style="background:linear-gradient(135deg,#92400E,#CA8A04);">
             <h3>Update Status <span id="approvedStageCandidateName"></span></h3>
             <button class="modal-close" onclick="closeModal('approvedStageModal')">×</button>
-        </div>
+                    </div>
         <form id="approvedStageForm" method="POST">
             @csrf
             <div class="modal-body" style="padding:18px;">
@@ -917,19 +944,19 @@
                                 <div>
                                     <div class="stage-pick-label">{{ $label }}</div>
                                     <div class="stage-pick-desc">{{ $stageDescriptions[$key] ?? '' }}</div>
-                                </div>
-                            </div>
+                </div>
+                    </div>
                         </label>
                     @endforeach
-                </div>
-            </div>
+                        </div>
+                    </div>
             <div class="modal-foot">
                 <button type="button" class="btn-i btn-ghost-i" onclick="closeModal('approvedStageModal')">Cancel</button>
                 <button type="submit" class="btn-i btn-primary-i">Save Status</button>
-            </div>
+                </div>
         </form>
-    </div>
-</div>
+                    </div>
+                </div>
 
 {{-- =============== REVERT MODAL =============== --}}
 <div id="revertModal" class="modal-overlay" onclick="closeOnBackdrop(event, 'revertModal')">
@@ -937,7 +964,7 @@
         <div class="modal-head" style="background:linear-gradient(135deg,#065F46,#059669);">
             <h3>Revert Candidate <span id="revertCandidateName"></span></h3>
             <button class="modal-close" onclick="closeModal('revertModal')">×</button>
-        </div>
+                    </div>
         <form id="revertForm" method="POST">
             @csrf
             <div class="modal-body">
@@ -956,7 +983,7 @@
                 <p style="font-size:11.5px;color:var(--c-muted);margin:0;line-height:1.5;">
                     The candidate assignment and uploaded resume are kept. Stage resets to <strong>Candidate Identified</strong>.
                 </p>
-            </div>
+                    </div>
             <div class="modal-foot" style="background:#f0fdf4;">
                 <button type="button" class="btn-i btn-ghost-i" onclick="closeModal('revertModal')">Cancel</button>
                 <button type="submit" class="btn-i btn-revert">
@@ -984,15 +1011,15 @@
                 <div class="form-field">
                     <label for="rejection_reason_input">Reason for Rejection <span style="color:var(--c-muted);font-weight:400;">(optional)</span></label>
                     <textarea id="rejection_reason_input" name="rejection_reason" class="reject-reason" placeholder="e.g., Candidate salary expectations exceed budget, not a skill match..."></textarea>
-                </div>
             </div>
+        </div>
             <div class="modal-foot" style="background:#fef9f9;">
                 <button type="button" class="btn-i btn-ghost-i" onclick="closeModal('rejectModal')">Cancel</button>
                 <button type="submit" class="btn-i" style="background:#DC2626;color:#fff;">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
                     Confirm Rejection
                 </button>
-            </div>
+        </div>
         </form>
     </div>
 </div>
@@ -1122,13 +1149,13 @@ function openRejectModal(tcId, candidateName) {
 
 // ─── Create Candidate Modal ───────────────────────────────────────────────────
 function openCreateCandidateModal() { openModal('createCandidateModal'); }
-function closeCreateCandidateModal() {
+    function closeCreateCandidateModal() {
     closeModal('createCandidateModal');
-    setTimeout(() => {
+        setTimeout(() => {
         const form = document.getElementById('createCandidateForm');
         if (form) form.reset();
-    }, 300);
-}
+        }, 300);
+    }
 
 // ─── Select2 init ─────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', function() {

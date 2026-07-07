@@ -12,7 +12,7 @@ class ClientController extends Controller
      */
     public function info()
     {
-        $clients = Client::orderBy('id', 'desc')->get();
+        $clients = Client::withCount('trackers')->orderBy('client')->get();
         return view('clients.info', compact('clients'));
     }
 
@@ -23,9 +23,10 @@ class ClientController extends Controller
     {
         $request->validate([
             'client' => 'required|string|max:255|unique:clients,client',
+            'type' => 'required|in:Direct,End',
         ]);
 
-        Client::create($request->all());
+        Client::create($request->only(['client', 'type']));
 
         return redirect()->route('clients.info')->with('success', 'Client added successfully.');
     }
@@ -46,10 +47,11 @@ class ClientController extends Controller
     {
         $request->validate([
             'client' => 'required|string|max:255|unique:clients,client,' . $id,
+            'type' => 'required|in:Direct,End',
         ]);
 
         $client = Client::findOrFail($id);
-        $client->update($request->all());
+        $client->update($request->only(['client', 'type']));
 
         return redirect()->route('clients.info')->with('success', 'Client updated successfully.');
     }

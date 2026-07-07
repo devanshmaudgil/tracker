@@ -275,19 +275,21 @@
             <div class="card-body">
                 <div class="pipeline-checklist">
                     @php
+                        use App\Models\JobStatus;
+                        $js = fn (int $id, string $fb = '') => JobStatus::labelFor($id, $fb);
                         $checks = [
-                            ['Candidate Identified',          true,                                                                                    null],
-                            ['Resume Reviewed',               $pipeline && $pipeline->resume_reviewed_by_recruiter === 'Completed',                   $pipeline?->resume_reviewed_date?->format('d M Y')],
-                            ['Recruiter Screening Call',      $pipeline && $pipeline->recruiter_screening_call === 'Completed',                        $pipeline?->recruiter_screening_call_date?->format('d M Y')],
-                            ['Candidate Shortlisted',         $pipeline && $pipeline->candidate_shortlisted,                                          null],
-                            ['Resume Submitted to Client',    $pipeline && $pipeline->resume_submitted_to_client === 'Submitted',                      null],
-                            ['Internal Interview Prep',       $pipeline && in_array($pipeline->radix_internal_interview_prep, ['Completed','Not Required']), $pipeline?->radix_internal_interview_prep_date?->format('d M Y')],
-                            ['Client Resume Review',          $pipeline && $pipeline->client_resume_review === 'Approved',                             null],
-                            ['Interview Round 1',             $pipeline && $pipeline->client_interview_round_1_date,                                   $pipeline?->client_interview_round_1_date?->format('d M Y')],
-                            ['Interview Round 2',             $pipeline && $pipeline->client_interview_round_2_date,                                   $pipeline?->client_interview_round_2_date?->format('d M Y')],
-                            ['Client Decision',               $pipeline && $pipeline->client_decision,                                                 $pipeline?->client_decision],
-                            ['Offer Extended',                $pipeline && $pipeline->offer_extended_to_candidate,                                     $pipeline?->offer_extended_date?->format('d M Y')],
-                            ['Background Check Completed',    $pipeline && $pipeline->background_check === 'Completed',                                null],
+                            [$js(2, 'Candidate Identified'),          true,                                                                                    null],
+                            [$js(3, 'Resume Reviewed'),               $pipeline && $pipeline->resume_reviewed_by_recruiter === 'Completed',                   $pipeline?->resume_reviewed_date?->format('d M Y')],
+                            [$js(4, 'Screening Call'),      $pipeline && $pipeline->recruiter_screening_call === 'Completed',                        $pipeline?->recruiter_screening_call_date?->format('d M Y')],
+                            [$js(5, 'Shortlisted'),         $pipeline && $pipeline->candidate_shortlisted,                                          null],
+                            [$js(6, 'Submitted to client'),    $pipeline && $pipeline->resume_submitted_to_client === 'Submitted',                      null],
+                            [$js(7, 'Internal Prep'),       $pipeline && in_array($pipeline->radix_internal_interview_prep, ['Completed','Not Required']), $pipeline?->radix_internal_interview_prep_date?->format('d M Y')],
+                            [$js(8, 'Client Review'),          $pipeline && $pipeline->client_resume_review === 'Approved',                             null],
+                            [$js(9, 'Round 1'),             $pipeline && $pipeline->client_interview_round_1_date,                                   $pipeline?->client_interview_round_1_date?->format('d M Y')],
+                            [$js(10, 'Round 2'),             $pipeline && $pipeline->client_interview_round_2_date,                                   $pipeline?->client_interview_round_2_date?->format('d M Y')],
+                            [$js(12, 'Client Decision Awaited'),       $pipeline && $pipeline->client_decision,                                                 $pipeline?->client_decision],
+                            [$js(14, 'Offer Extended to Candidate'),                $pipeline && $pipeline->offer_extended_to_candidate,                                     $pipeline?->offer_extended_date?->format('d M Y')],
+                            [$js(15, 'Background Check'),    $pipeline && $pipeline->background_check === 'Completed',                                null],
                         ];
                     @endphp
                     @foreach($checks as [$label, $done, $val])

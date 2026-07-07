@@ -154,7 +154,10 @@ class TrackerImport
                 'type_of_job' => strtolower($data['job_type'] ?? 'contract'),
                 'bill_rate_salary_range' => $data['bill_rate'],
                 'priority' => $data['priority'],
-                'submission_deadline' => $this->parseDate($data['deadline']),
+                'submission_deadline' => \App\Services\Tracker\SubmissionDeadlineResolver::toDateString(
+                    $data['deadline'],
+                    $this->parseDate($data['prd'])
+                ),
             ]);
         }
 

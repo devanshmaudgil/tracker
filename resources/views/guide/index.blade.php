@@ -325,7 +325,7 @@
                             <div class="guide-card__ico">@include('guide._icon', ['n' => 'globe'])</div>
                             <h3>Regions</h3>
                             <p>Locations grouped into regions (USA / Canada) for filtering.</p>
-                            @include('guide._go', ['url' => route('regions.index'), 'label' => 'Manage regions'])
+                            @include('guide._go', ['url' => route('locations.index'), 'label' => 'Manage locations'])
                         </div>
                         <div class="guide-card">
                             <div class="guide-card__ico">@include('guide._icon', ['n' => 'id'])</div>

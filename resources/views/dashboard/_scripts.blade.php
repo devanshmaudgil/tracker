@@ -259,16 +259,16 @@
         updateChart('chartSource', function (ch) { ch.data.labels = data.source_breakdown.labels; ch.data.datasets[0].data = data.source_breakdown.data; });
     }
 
-    /* ── Recent positions table ── */
+    /* ── Consolidated data table ── */
     function escapeHtml(str) {
         return String(str == null ? '' : str).replace(/[&<>"']/g, function (m) {
             return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m];
         });
     }
 
-    function renderTable(rows) {
-        const body = document.getElementById('recentPositionsBody');
-        const empty = document.getElementById('recentEmpty');
+    function renderConsolidatedTable(rows) {
+        const body = document.getElementById('consolidatedPositionsBody');
+        const empty = document.getElementById('consolidatedEmpty');
         if (!body) return;
         if (!rows || !rows.length) {
             body.innerHTML = '';
@@ -289,6 +289,41 @@
                 + '<td><span class="dash2-badge dash2-badge--' + escapeHtml(row.status_group) + '">' + escapeHtml(row.status) + '</span></td>'
                 + '</tr>';
         }).join('');
+    }
+
+    let consolidatedPage = 1;
+    let consolidatedDebounce;
+
+    function fetchConsolidated(page) {
+        consolidatedPage = page || 1;
+        const form = document.getElementById('dashFilters');
+        if (!form) return;
+        const params = new URLSearchParams(new FormData(form));
+        params.set('page', String(consolidatedPage));
+
+        fetch(window.DASHBOARD_POSITIONS_URL + '?' + params.toString(), {
+            headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
+        })
+            .then(function (res) { return res.json(); })
+            .then(function (data) {
+                renderConsolidatedTable(data.items);
+                const pagination = document.getElementById('consolidatedPagination');
+                const countText = document.getElementById('consolidatedCountText');
+                if (pagination) pagination.innerHTML = data.pagination || '';
+                if (countText) countText.textContent = data.count_text || '';
+                if (pagination) {
+                    pagination.querySelectorAll('a').forEach(function (link) {
+                        link.addEventListener('click', function (e) {
+                            const href = link.getAttribute('href');
+                            if (!href) return;
+                            e.preventDefault();
+                            const pageMatch = href.match(/[?&]page=(\d+)/);
+                            fetchConsolidated(pageMatch ? parseInt(pageMatch[1], 10) : 1);
+                        });
+                    });
+                }
+            })
+            .catch(function () { /* keep previous view */ });
     }
 
     /* ── AJAX filtering ── */
@@ -360,7 +395,7 @@
             .then(function (data) {
                 setKpis(data);
                 refreshCharts(data);
-                renderTable(data.recent_positions);
+                fetchConsolidated(1);
             })
             .catch(function () { /* keep previous view on error */ })
             .finally(function () { if (loading) loading.classList.remove('is-active'); });
@@ -514,8 +549,23 @@
     function init() {
         buildAll();
         setKpis(payload);
-        renderTable(payload.recent_positions);
+        fetchConsolidated(1);
         syncFilterChips();
+
+        const consolidatedSearch = document.getElementById('consolidatedSearch');
+        const mainSearch = form ? form.querySelector('input[name="search"]') : null;
+        if (consolidatedSearch && mainSearch) {
+            consolidatedSearch.addEventListener('input', function () {
+                mainSearch.value = consolidatedSearch.value;
+                clearTimeout(consolidatedDebounce);
+                consolidatedDebounce = setTimeout(function () {
+                    fetchData();
+                }, 400);
+            });
+            mainSearch.addEventListener('input', function () {
+                consolidatedSearch.value = mainSearch.value;
+            });
+        }
     }
 
     if (document.readyState === 'loading') {

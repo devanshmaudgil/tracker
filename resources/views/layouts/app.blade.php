@@ -372,7 +372,7 @@
             height: var(--topbar-height);
             position: sticky;
             top: 0;
-            z-index: 900;
+            z-index: 5000;
             display: flex;
             align-items: center;
             justify-content: space-between;
@@ -381,7 +381,7 @@
             border-bottom: 2px solid transparent;
             border-image: linear-gradient(90deg, transparent, var(--gold), transparent) 1;
             box-shadow: 0 4px 24px rgba(10, 45, 41, 0.2);
-            overflow: hidden;
+            overflow: visible;
             isolation: isolate;
         }
 
@@ -646,7 +646,15 @@
             color: var(--gold);
         }
 
-        .topbar-user {
+        .topbar-user-menu {
+            position: relative;
+        }
+
+        .topbar-user-menu.open {
+            z-index: 5100;
+        }
+
+        .topbar-user-trigger {
             display: flex;
             align-items: center;
             gap: 10px;
@@ -654,12 +662,112 @@
             background: rgba(255,255,255,0.06);
             border: 1px solid rgba(241, 205, 134, 0.18);
             border-radius: 40px;
-            transition: background 0.3s, box-shadow 0.3s;
+            cursor: pointer;
+            font-family: inherit;
+            color: inherit;
+            transition: background 0.3s, box-shadow 0.3s, border-color 0.3s;
         }
 
-        .topbar-user:hover {
+        .topbar-user-trigger:hover,
+        .topbar-user-menu.open .topbar-user-trigger {
             background: rgba(241, 205, 134, 0.1);
+            border-color: rgba(241, 205, 134, 0.35);
             box-shadow: 0 0 20px rgba(241, 205, 134, 0.12);
+        }
+
+        .topbar-user-chevron {
+            width: 14px;
+            height: 14px;
+            color: rgba(255, 255, 255, 0.7);
+            flex-shrink: 0;
+            transition: transform 0.25s ease;
+        }
+
+        .topbar-user-menu.open .topbar-user-chevron {
+            transform: rotate(180deg);
+            color: var(--gold);
+        }
+
+        .topbar-user-dropdown {
+            position: absolute;
+            top: calc(100% + 10px);
+            right: 0;
+            min-width: 190px;
+            background: #fff;
+            border: 1px solid rgba(10, 45, 41, 0.08);
+            border-radius: 14px;
+            box-shadow: 0 12px 40px rgba(10, 45, 41, 0.18);
+            padding: 6px;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(-8px);
+            transition: opacity 0.22s ease, transform 0.22s ease, visibility 0.22s ease;
+            z-index: 5100;
+        }
+
+        .topbar-user-menu.open .topbar-user-dropdown {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+
+        .topbar-user-dropdown-head {
+            padding: 10px 12px 8px;
+            border-bottom: 1px solid #f0f1f3;
+            margin-bottom: 4px;
+        }
+
+        .topbar-user-dropdown-name {
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--teal-deep);
+            line-height: 1.3;
+        }
+
+        .topbar-user-dropdown-label {
+            font-size: 10px;
+            font-weight: 600;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            color: #9ca3af;
+            margin-top: 2px;
+        }
+
+        .topbar-user-dropdown-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            width: 100%;
+            padding: 10px 12px;
+            border: none;
+            border-radius: 10px;
+            background: transparent;
+            font-family: inherit;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--teal-deep);
+            text-decoration: none;
+            cursor: pointer;
+            transition: background 0.2s ease, color 0.2s ease;
+        }
+
+        .topbar-user-dropdown-item svg {
+            width: 16px;
+            height: 16px;
+            flex-shrink: 0;
+        }
+
+        .topbar-user-dropdown-item:hover {
+            background: #f8faf9;
+        }
+
+        .topbar-user-dropdown-item--logout {
+            color: #dc2626;
+        }
+
+        .topbar-user-dropdown-item--logout:hover {
+            background: #fef2f2;
+            color: #b91c1c;
         }
 
         .topbar-avatar {
@@ -736,7 +844,8 @@
                 width: 200px;
             }
 
-            .topbar-user .topbar-username { display: none; }
+            .topbar-user-menu .topbar-username,
+            .topbar-user-menu .topbar-user-chevron { display: none; }
             .topbar-heading { font-size: 18px; }
             .page-body { padding: 14px 12px; }
         }
@@ -848,18 +957,18 @@
 
                     <li class="dropdown-wrapper">
                         <a href="javascript:void(0)"
-                           class="dropdown-btn {{ (request()->routeIs('months.*') || request()->routeIs('users.*') || request()->routeIs('clients.*') || request()->routeIs('regions.*') || request()->routeIs('candidates.*')) ? 'active' : '' }}"
+                           class="dropdown-btn {{ (request()->routeIs('months.*') || request()->routeIs('users.*') || request()->routeIs('clients.*') || request()->routeIs('locations.*') || request()->routeIs('candidates.*')) ? 'active' : '' }}"
                            onclick="toggleDropdown(this)"
                            data-tooltip="Register">
                             <span class="menu-icon"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></span>
                             <span class="menu-label">Register</span>
                             <span class="dropdown-chevron">▼</span>
                         </a>
-                        <ul class="submenu {{ (request()->routeIs('months.*') || request()->routeIs('users.*') || request()->routeIs('clients.*') || request()->routeIs('regions.*') || request()->routeIs('candidates.*')) ? 'active' : '' }}">
+                        <ul class="submenu {{ (request()->routeIs('months.*') || request()->routeIs('users.*') || request()->routeIs('clients.*') || request()->routeIs('locations.*') || request()->routeIs('candidates.*')) ? 'active' : '' }}">
                             <li><a href="{{ route('months.index') }}" class="{{ request()->routeIs('months.*') ? 'active' : '' }}"><span class="menu-label">Months</span></a></li>
                             <li><a href="{{ route('users.index') }}" class="{{ request()->routeIs('users.*') ? 'active' : '' }}"><span class="menu-label">Users</span></a></li>
                             <li><a href="{{ route('clients.info') }}" class="{{ request()->routeIs('clients.*') ? 'active' : '' }}"><span class="menu-label">Clients</span></a></li>
-                            <li><a href="{{ route('regions.index') }}" class="{{ request()->routeIs('regions.*') ? 'active' : '' }}"><span class="menu-label">Region</span></a></li>
+                            <li><a href="{{ route('locations.index') }}" class="{{ request()->routeIs('locations.*') ? 'active' : '' }}"><span class="menu-label">Locations</span></a></li>
                             <li><a href="{{ route('candidates.index') }}" class="{{ request()->routeIs('candidates.*') ? 'active' : '' }}"><span class="menu-label">Candidates</span></a></li>
                         </ul>
                     </li>
@@ -873,13 +982,6 @@
                     <span class="menu-icon"><svg viewBox="0 0 24 24"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg></span>
                     <span class="menu-label">User Guide</span>
                 </a>
-                <form method="POST" action="{{ route('logout') }}" style="margin: 0;">
-                    @csrf
-                    <a href="#" class="logout-link" data-tooltip="Logout" onclick="event.preventDefault(); this.closest('form').submit();">
-                        <span class="menu-icon"><svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></span>
-                        <span class="menu-label">Logout</span>
-                    </a>
-                </form>
             </div>
         </aside>
 
@@ -893,7 +995,7 @@
                             request()->routeIs('resume.*') => 'Resume Analysis',
                             request()->routeIs('candidates.search.*') => 'Find Candidates',
                             request()->routeIs('guide.*') => 'User Guide',
-                            request()->routeIs('months.*', 'clients.*', 'regions.*', 'candidates.*') => 'Register',
+                            request()->routeIs('months.*', 'clients.*', 'locations.*', 'candidates.*') => 'Register',
                             request()->routeIs('users.*') => 'User Management',
                             default => 'Recruiterment Workspace',
                         };
@@ -941,9 +1043,25 @@
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
                     </button>
                     @auth
-                    <div class="topbar-user">
-                        <div class="topbar-avatar">{{ strtoupper(substr(Auth::user()->username ?? 'U', 0, 1)) }}</div>
-                        <div class="topbar-username">{{ Auth::user()->username ?? 'User' }}</div>
+                    <div class="topbar-user-menu" id="topbarUserMenu">
+                        <button type="button" class="topbar-user-trigger" id="topbarUserTrigger" aria-expanded="false" aria-haspopup="true" aria-controls="topbarUserDropdown">
+                            <div class="topbar-avatar">{{ strtoupper(substr(Auth::user()->username ?? 'U', 0, 1)) }}</div>
+                            <div class="topbar-username">{{ Auth::user()->username ?? 'User' }}</div>
+                            <svg class="topbar-user-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+                        </button>
+                        <div class="topbar-user-dropdown" id="topbarUserDropdown" role="menu">
+                            <div class="topbar-user-dropdown-head">
+                                <div class="topbar-user-dropdown-name">{{ Auth::user()->username ?? 'User' }}</div>
+                                <div class="topbar-user-dropdown-label">Signed in</div>
+                            </div>
+                            <form method="POST" action="{{ route('logout') }}" style="margin:0;">
+                                @csrf
+                                <button type="submit" class="topbar-user-dropdown-item topbar-user-dropdown-item--logout" role="menuitem">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                                    Logout
+                                </button>
+                            </form>
+                        </div>
                     </div>
                     @endauth
                 </div>
@@ -1058,11 +1176,49 @@
             }
         }
 
+        function setUserMenuOpen(isOpen) {
+            const menu = document.getElementById('topbarUserMenu');
+            const trigger = document.getElementById('topbarUserTrigger');
+            if (!menu || !trigger) return;
+
+            menu.classList.toggle('open', isOpen);
+            trigger.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+        }
+
+        function initUserMenu() {
+            const menu = document.getElementById('topbarUserMenu');
+            const trigger = document.getElementById('topbarUserTrigger');
+            if (!menu || !trigger) return;
+
+            trigger.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const willOpen = !menu.classList.contains('open');
+                setWorldClockOpen(false);
+                setUserMenuOpen(willOpen);
+            });
+
+            document.addEventListener('click', (e) => {
+                if (!menu.contains(e.target)) {
+                    setUserMenuOpen(false);
+                }
+            });
+
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') {
+                    setUserMenuOpen(false);
+                }
+            });
+        }
+
         function setWorldClockOpen(isOpen) {
             const worldClock = document.getElementById('worldClock');
             const trigger = document.getElementById('worldClockTrigger');
             const panel = document.getElementById('worldClockPanel');
             if (!worldClock || !trigger || !panel) return;
+
+            if (isOpen) {
+                setUserMenuOpen(false);
+            }
 
             worldClock.classList.toggle('open', isOpen);
             trigger.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
@@ -1156,6 +1312,7 @@
         window.addEventListener('DOMContentLoaded', function() {
             updateTopbarClock();
             initWorldClock();
+            initUserMenu();
             setInterval(updateTopbarClock, 1000);
         });
     </script>

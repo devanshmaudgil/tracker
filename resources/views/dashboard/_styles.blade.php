@@ -338,8 +338,125 @@
         .dash2-toolbar__actions { order: 2; width: 100%; justify-content: space-between; }
     }
 
-    /* ── Recent table ── */
-    .dash2-table-wrap { overflow-x: auto; }
+    /* ── Consolidated table ── */
+    .dash2-consolidated-toolbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 14px 16px 0;
+        flex-wrap: wrap;
+    }
+
+    .dash2-consolidated-search {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex: 1;
+        min-width: 220px;
+        max-width: 420px;
+        background: var(--d2-bg-soft);
+        border: 1px solid var(--d2-border);
+        border-radius: 10px;
+        padding: 8px 12px;
+    }
+
+    .dash2-consolidated-search svg {
+        width: 16px;
+        height: 16px;
+        color: var(--d2-muted);
+        flex-shrink: 0;
+    }
+
+    .dash2-consolidated-search input {
+        border: none;
+        background: transparent;
+        width: 100%;
+        font-size: 13px;
+        font-family: inherit;
+        outline: none;
+        color: #111827;
+    }
+
+    .dash2-consolidated-count {
+        font-size: 12px;
+        color: var(--d2-muted);
+        font-weight: 600;
+    }
+
+    .dash2-consolidated-pagination {
+        padding: 12px 16px 16px;
+        display: flex;
+        justify-content: center;
+    }
+
+    .dash2-consolidated-pagination nav {
+        width: 100%;
+        display: flex;
+        justify-content: center;
+    }
+
+    .dash2-consolidated-pagination .pagination {
+        display: flex;
+        list-style: none;
+        padding: 0;
+        margin: 0;
+        gap: 6px;
+        flex-wrap: wrap;
+        justify-content: center;
+        align-items: center;
+    }
+
+    .dash2-consolidated-pagination .pagination li {
+        display: inline-flex;
+        margin: 0;
+    }
+
+    .dash2-consolidated-pagination .pagination li a,
+    .dash2-consolidated-pagination .pagination li span {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 38px;
+        padding: 8px 14px;
+        border: 1.5px solid #e2ebe9;
+        border-radius: 10px;
+        color: var(--d2-teal);
+        text-decoration: none;
+        transition: all 0.2s ease;
+        font-size: 13px;
+        font-weight: 600;
+        background: #fff;
+        line-height: 1;
+    }
+
+    .dash2-consolidated-pagination .pagination li a:hover {
+        background: rgba(241, 205, 134, 0.15);
+        border-color: var(--d2-gold);
+        color: var(--d2-teal);
+    }
+
+    .dash2-consolidated-pagination .pagination li.active span {
+        background: var(--d2-teal);
+        border-color: var(--d2-teal);
+        color: #fff;
+    }
+
+    .dash2-consolidated-pagination .pagination li.disabled span {
+        color: #9ca3af;
+        cursor: not-allowed;
+        background: #f3f4f6;
+        border-color: #e5e7eb;
+    }
+
+    .dash2-consolidated-pagination .pagination-container {
+        margin-top: 0;
+        display: flex;
+        justify-content: center;
+        width: 100%;
+    }
+
+    .dash2-table-wrap { overflow-x: auto; padding-top: 12px; }
     .dash2-table { width: 100%; border-collapse: collapse; font-size: 13px; text-align: center; }
     .dash2-table th {
         padding: 11px 14px; text-align: center;

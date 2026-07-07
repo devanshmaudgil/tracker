@@ -6,15 +6,76 @@ use App\Models\Candidate;
 use App\Models\Region;
 use App\Models\TrackerCandidate;
 use App\Models\CandidatePipelineStatus;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
 class CandidateController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $candidates = Candidate::with(['location', 'trackerCandidates.trackerInfo'])->orderBy('id', 'desc')->get();
-        return view('candidates.index', compact('candidates'));
+        $query = Candidate::with(['location', 'trackerCandidates.trackerInfo']);
+
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('full_name', 'like', "%{$search}%")
+                    ->orWhere('email', 'like', "%{$search}%")
+                    ->orWhere('phone', 'like', "%{$search}%")
+                    ->orWhere('location_text', 'like', "%{$search}%")
+                    ->orWhere('work_status', 'like', "%{$search}%")
+                    ->orWhere('current_company', 'like', "%{$search}%")
+                    ->orWhere('pay_rate', 'like', "%{$search}%")
+                    ->orWhere('placement_pay_rate', 'like', "%{$search}%")
+                    ->orWhere('summary', 'like', "%{$search}%")
+                    ->orWhere('remarks', 'like', "%{$search}%")
+                    ->orWhere('agency_name', 'like', "%{$search}%")
+                    ->orWhere('agency_poc', 'like', "%{$search}%")
+                    ->orWhere('agency_poc_phone', 'like', "%{$search}%")
+                    ->orWhereHas('location', function ($locationQuery) use ($search) {
+                        $locationQuery->where('city', 'like', "%{$search}%")
+                            ->orWhere('region', 'like', "%{$search}%");
+                    });
+            });
+        }
+
+        if ($request->filled('work_status')) {
+            $query->where('work_status', $request->work_status);
+        }
+
+        $candidates = $query->orderBy('id', 'desc')->paginate(15)->withQueryString();
+
+        if ($request->ajax()) {
+            return response()->json([
+                'table' => view('candidates._table', compact('candidates'))->render(),
+                'pagination' => view('candidates._pagination', compact('candidates'))->render(),
+                'count_text' => $this->candidateCountText($candidates),
+            ]);
+        }
+
+        $stats = [
+            'total' => Candidate::count(),
+            'with_resume' => Candidate::whereNotNull('resume_file')->where('resume_file', '!=', '')->count(),
+            'with_jobs' => Candidate::whereHas('trackerCandidates')->count(),
+        ];
+
+        $statusCounts = Candidate::query()
+            ->selectRaw('work_status, COUNT(*) as aggregate')
+            ->whereNotNull('work_status')
+            ->where('work_status', '!=', '')
+            ->groupBy('work_status')
+            ->pluck('aggregate', 'work_status');
+
+        return view('candidates.index', compact('candidates', 'stats', 'statusCounts'));
+    }
+
+    private function candidateCountText(LengthAwarePaginator $candidates): string
+    {
+        if ($candidates->total() === 0) {
+            return 'No candidates found';
+        }
+
+        return "Showing {$candidates->firstItem()} to {$candidates->lastItem()} of {$candidates->total()} candidates";
     }
 
     public function store(Request $request)
@@ -27,6 +88,10 @@ class CandidateController extends Controller
             'work_status' => 'nullable|in:GC,PR,Citizen,H1B,OPT',
             'current_company' => 'nullable|string|max:255',
             'pay_rate' => 'nullable|string|max:255',
+            'placement_pay_rate' => 'nullable|string|max:255',
+            'location_text' => 'nullable|string|max:255',
+            'summary' => 'nullable|string',
+            'remarks' => 'nullable|string|max:5000',
             'agency_name' => 'nullable|string|max:255',
             'agency_poc' => 'nullable|string|max:255',
             'agency_poc_phone' => 'nullable|string|max:255',
@@ -101,6 +166,10 @@ class CandidateController extends Controller
             'work_status' => 'nullable|in:GC,PR,Citizen,H1B,OPT',
             'current_company' => 'nullable|string|max:255',
             'pay_rate' => 'nullable|string|max:255',
+            'placement_pay_rate' => 'nullable|string|max:255',
+            'location_text' => 'nullable|string|max:255',
+            'summary' => 'nullable|string',
+            'remarks' => 'nullable|string|max:5000',
             'agency_name' => 'nullable|string|max:255',
             'agency_poc' => 'nullable|string|max:255',
             'agency_poc_phone' => 'nullable|string|max:255',

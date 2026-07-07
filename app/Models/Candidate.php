@@ -12,13 +12,17 @@ class Candidate extends Model
         'email',
         'phone',
         'location_id',
+        'location_text',
         'work_status',
         'current_company',
         'pay_rate',
+        'placement_pay_rate',
         'agency_name',
         'agency_poc',
         'agency_poc_phone',
         'resume_file',
+        'summary',
+        'remarks',
     ];
 
     protected $hidden = ['resume_file'];

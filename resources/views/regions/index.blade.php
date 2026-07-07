@@ -1,296 +1,153 @@
 @extends('layouts.app')
 
-@section('title', 'Regions')
+@section('title', 'Locations')
 
 @section('content')
-<div class="content-header">
-    <h1>Regions</h1>
-    <button type="button" class="btn btn-primary" onclick="openModal()">Add</button>
-</div>
+@include('partials._crud_theme')
 
-<style>
-    .table-container table {
-        font-size: 12px;
-    }
-    .table-container th,
-    .table-container td {
-        text-align: center;
-        padding: 6px 8px;
-    }
-    .table-container th {
-        font-size: 11px;
-        white-space: nowrap;
-    }
-    
-    .search-bar-container {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 15px;
-    }
-    
-    .results-count {
-        color: #666;
-        font-size: 14px;
-    }
-    
-    .search-input-wrapper {
-        width: 300px;
-    }
-    
-    .search-input-wrapper input {
-        width: 100%;
-        padding: 8px 12px;
-        border: 1px solid #ddd;
-        border-radius: 4px;
-        font-size: 14px;
-    }
-    
-    .search-input-wrapper input:focus {
-        outline: none;
-        border-color: #f1cd86;
-    }
-    
-    .no-results-row {
-        display: none;
-    }
-    
-    /* Pagination Styling */
-    .pagination-container {
-        margin-top: 20px;
-        display: flex;
-        justify-content: center;
-    }
-    
-    .pagination {
-        display: flex;
-        list-style: none;
-        padding: 0;
-        gap: 5px;
-    }
-    
-    .pagination li {
-        display: inline-block;
-    }
-    
-    .pagination li a,
-    .pagination li span {
-        padding: 8px 12px;
-        border: 1px solid #ddd;
-        border-radius: 4px;
-        color: #0a2d29;
-        text-decoration: none;
-        transition: all 0.3s;
-    }
-    
-    .pagination li a:hover {
-        background-color: #f1cd86;
-        border-color: #f1cd86;
-        color: #0a2d29;
-    }
-    
-    .pagination li.active span {
-        background-color: #0a2d29;
-        border-color: #0a2d29;
-        color: white;
-    }
-    
-    .pagination li.disabled span {
-        color: #999;
-        cursor: not-allowed;
-    }
+<div class="crud-page">
 
-    .action-buttons {
-        display: flex;
-        justify-content: center;
-        gap: 10px;
-    }
-</style>
+    {{-- Hero --}}
+    <header class="crud-hero crud-enter crud-enter-1">
+        <div>
+            <div class="crud-hero__eyebrow">RADiiX INFINITEii</div>
+            <h1 class="crud-hero__title">Locations</h1>
+            <p class="crud-hero__sub">Cities and states used across job demands and candidate locations.</p>
+        </div>
+        <button type="button" class="crud-btn-add" onclick="openModal()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Add Locations
+        </button>
+    </header>
 
-<!-- Search Bar -->
-<div class="search-bar-container">
-    <div class="results-count" id="resultsCount">
-        @if($regions->total() > 0)
-            Showing {{ $regions->firstItem() }} to {{ $regions->lastItem() }} of {{ $regions->total() }} entries
-        @else
-            No entries found
+    {{-- Stats --}}
+    <div class="crud-stats crud-enter crud-enter-2">
+        <div class="crud-stat">
+            <div class="crud-stat__num">{{ $stats['total'] }}</div>
+            <div class="crud-stat__lbl">Total Entries</div>
+        </div>
+        <div class="crud-stat">
+            <div class="crud-stat__num">{{ $stats['states'] }}</div>
+            <div class="crud-stat__lbl">States / Provinces</div>
+        </div>
+        <div class="crud-stat">
+            <div class="crud-stat__num">{{ $stats['cities'] }}</div>
+            <div class="crud-stat__lbl">Cities</div>
+        </div>
+    </div>
+
+    {{-- Toolbar --}}
+    <div class="crud-toolbar crud-enter crud-enter-3">
+        <div class="crud-search">
+            <svg class="crud-search__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+            </svg>
+            <input type="search"
+                   id="searchInput"
+                   class="crud-search__input"
+                   placeholder="Search by city or state"
+                   value="{{ request('search') }}"
+                   autocomplete="off">
+        </div>
+        <div class="crud-search-meta" id="resultsCount">
+            @if($regions->total() > 0)
+                Showing {{ $regions->firstItem() }} to {{ $regions->lastItem() }} of {{ $regions->total() }} entries
+            @else
+                No entries found
+            @endif
+        </div>
+    </div>
+
+    {{-- Table --}}
+    <div class="crud-table-card crud-enter crud-enter-4">
+        <div class="crud-table-scroll">
+            <table class="crud-table">
+                <thead>
+                    <tr>
+                        <th style="width:60px;">S.No</th>
+                        <th class="is-left">City</th>
+                        <th>State / Province</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="regionsTableBody">
+                    @include('regions._table')
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    {{-- Pagination --}}
+    <div id="paginationContainer">
+        @if($regions->hasPages())
+            <div class="crud-pagination">
+                {{ $regions->appends(request()->query())->links('vendor.pagination.custom') }}
+            </div>
         @endif
     </div>
-    <div class="search-input-wrapper">
-        <input type="text" 
-               id="searchInput" 
-               placeholder="Search by city or state..." 
-               value="{{ request('search') }}"
-               autocomplete="off">
-    </div>
 </div>
 
-<div class="table-container">
-    <table>
-        <thead>
-            <tr>
-                <th>City</th>
-                <th>State</th>
-                <th>Actions</th>
-            </tr>
-        </thead>
-        <tbody id="regionsTableBody">
-            @include('regions._table')
-        </tbody>
-    </table>
-</div>
-
-<!-- Pagination -->
-<div id="paginationContainer">
-    @if($regions->hasPages())
-        <div class="pagination-container">
-            {{ $regions->appends(request()->query())->links('vendor.pagination.custom') }}
+{{-- Add / Edit Region Modal --}}
+<div id="regionModal" class="crud-modal-overlay">
+    <div class="crud-modal" role="dialog" aria-labelledby="regionModalTitle">
+        <div class="crud-modal__head">
+            <h2 id="regionModalTitle">Add Location</h2>
+            <button type="button" class="crud-modal__close" onclick="closeModal()" aria-label="Close">&times;</button>
         </div>
-    @endif
-</div>
-
-<!-- Modal -->
-<div id="regionModal" class="modal" style="display: none;">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h2 id="modalTitle">Add Region</h2>
-            <span class="close" onclick="closeModal()">&times;</span>
-        </div>
-        <form id="regionForm" method="POST" action="{{ route('regions.store') }}">
+        <form id="regionForm" method="POST" action="{{ route('locations.store') }}">
             @csrf
-            <input type="hidden" id="formMethod" name="_method" value="POST">
-            <input type="hidden" id="recordId" name="id">
-            
-            <div class="form-group">
-                <label for="region">State/Province *</label>
-                <input type="text" id="region" name="region" value="{{ old('region') }}" required placeholder="Enter state or province" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
-                @error('region')
-                    <div style="color: #dc3545; margin-top: 5px; font-size: 14px;">{{ $message }}</div>
-                @enderror
-            </div>
-
-            <div class="form-group">
-                <label for="city">City</label>
-                <input type="text" id="city" name="city" value="{{ old('city') }}" placeholder="Enter city (optional)" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
-                @error('city')
-                    <div style="color: #dc3545; margin-top: 5px; font-size: 14px;">{{ $message }}</div>
-                @enderror
-            </div>
-
-            <div class="form-group">
-                <button type="submit" class="btn btn-primary" id="submitBtn">Add</button>
-                <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+            <input type="hidden" id="regionFormMethod" name="_method" value="POST">
+            <div class="crud-modal__body">
+                <div class="crud-field">
+                    <label for="region">State / Province *</label>
+                    <input type="text" id="region" name="region" value="{{ old('region') }}" required placeholder="e.g. Texas">
+                    @error('region')<div class="crud-field__error">{{ $message }}</div>@enderror
+                </div>
+                <div class="crud-field">
+                    <label for="city">City</label>
+                    <input type="text" id="city" name="city" value="{{ old('city') }}" placeholder="e.g. Austin (optional)">
+                    @error('city')<div class="crud-field__error">{{ $message }}</div>@enderror
+                </div>
+                <div class="crud-modal__foot">
+                    <button type="button" class="crud-btn crud-btn--ghost" onclick="closeModal()">Cancel</button>
+                    <button type="submit" class="crud-btn crud-btn--primary" id="regionSubmitBtn">Save Location</button>
+                </div>
             </div>
         </form>
     </div>
 </div>
 
-<style>
-    .modal {
-        display: none;
-        position: fixed;
-        z-index: 1000;
-        left: 0;
-        top: 0;
-        width: 100%;
-        height: 100%;
-        overflow: auto;
-        background-color: rgba(0, 0, 0, 0.5);
-    }
-
-    .modal-content {
-        background-color: white;
-        margin: 5% auto;
-        padding: 0;
-        border-radius: 8px;
-        width: 90%;
-        max-width: 600px;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-    }
-
-    .modal-header {
-        padding: 20px;
-        border-bottom: 1px solid #ddd;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        background-color: #0a2d29;
-        color: white;
-        border-radius: 8px 8px 0 0;
-    }
-
-    .modal-header h2 {
-        margin: 0;
-        color: white;
-        font-size: 24px;
-    }
-
-    .close {
-        color: white;
-        font-size: 28px;
-        font-weight: bold;
-        cursor: pointer;
-        line-height: 20px;
-    }
-
-    .close:hover {
-        opacity: 0.7;
-    }
-
-    #regionForm {
-        padding: 20px;
-    }
-
-    .form-group {
-        margin-bottom: 20px;
-    }
-
-    .form-group label {
-        display: block;
-        margin-bottom: 8px;
-        font-weight: 600;
-        color: #0a2d29;
-    }
-</style>
-
 <script>
-    let currentRecordId = null;
-
     function openModal(recordId = null, rowElement = null) {
-        currentRecordId = recordId;
-        const modal = document.getElementById('regionModal');
+        const overlay = document.getElementById('regionModal');
         const form = document.getElementById('regionForm');
-        const modalTitle = document.getElementById('modalTitle');
-        const submitBtn = document.getElementById('submitBtn');
-        const formMethod = document.getElementById('formMethod');
-        const recordIdInput = document.getElementById('recordId');
+        const title = document.getElementById('regionModalTitle');
+        const submitBtn = document.getElementById('regionSubmitBtn');
+        const method = document.getElementById('regionFormMethod');
 
         if (recordId && rowElement) {
-            modalTitle.textContent = 'Edit Region';
-            submitBtn.textContent = 'Update';
-            formMethod.value = 'PUT';
-            form.action = `/regions/${recordId}`;
-            recordIdInput.value = recordId;
-            
+            title.textContent = 'Edit Location';
+            submitBtn.textContent = 'Update Location';
+            method.value = 'PUT';
+            form.action = `/locations/${recordId}`;
             document.getElementById('region').value = rowElement.dataset.region || '';
             document.getElementById('city').value = rowElement.dataset.city || '';
-            
-            modal.style.display = 'block';
         } else {
-            modalTitle.textContent = 'Add Region';
-            submitBtn.textContent = 'Add';
-            formMethod.value = 'POST';
-            form.action = '{{ route('regions.store') }}';
-            recordIdInput.value = '';
+            title.textContent = 'Add Location';
+            submitBtn.textContent = 'Save Location';
+            method.value = 'POST';
+            form.action = '{{ route('locations.store') }}';
             form.reset();
-            modal.style.display = 'block';
         }
+        overlay.classList.add('is-open');
+        document.body.style.overflow = 'hidden';
+        document.getElementById('region').focus();
     }
 
     function closeModal() {
-        document.getElementById('regionModal').style.display = 'none';
+        document.getElementById('regionModal').classList.remove('is-open');
+        document.body.style.overflow = '';
         document.getElementById('regionForm').reset();
-        currentRecordId = null;
     }
 
     function editRecord(id) {
@@ -298,61 +155,58 @@
         openModal(id, row);
     }
 
-    window.onclick = function(event) {
-        const modal = document.getElementById('regionModal');
-        if (event.target == modal) {
-            closeModal();
-        }
-    }
-    // AJAX search and pagination functionality
-    document.addEventListener('DOMContentLoaded', function() {
+    document.getElementById('regionModal').addEventListener('click', function (e) {
+        if (e.target === this) closeModal();
+    });
+    document.addEventListener('keydown', e => {
+        if (e.key === 'Escape') closeModal();
+    });
+
+    // AJAX search + pagination
+    document.addEventListener('DOMContentLoaded', function () {
         const searchInput = document.getElementById('searchInput');
         const tableBody = document.getElementById('regionsTableBody');
         const paginationContainer = document.getElementById('paginationContainer');
         const resultsCount = document.getElementById('resultsCount');
         let debounceTimer;
-        
+
         function fetchData(url, search = '') {
-            const fetchUrl = new URL(url);
-            if (search) {
-                fetchUrl.searchParams.set('search', search);
-            }
-            
-            fetch(fetchUrl, {
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest'
-                }
-            })
-            .then(response => response.json())
-            .then(data => {
-                tableBody.innerHTML = data.table;
-                paginationContainer.innerHTML = data.pagination;
-                resultsCount.textContent = data.count_text;
-            })
-            .catch(error => console.error('Error:', error));
+            const fetchUrl = new URL(url, window.location.origin);
+            if (search) fetchUrl.searchParams.set('search', search);
+
+            fetch(fetchUrl, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+                .then(response => response.json())
+                .then(data => {
+                    tableBody.innerHTML = data.table;
+                    paginationContainer.innerHTML = data.pagination
+                        ? `<div class="crud-pagination">${data.pagination}</div>`
+                        : '';
+                    resultsCount.textContent = data.count_text;
+                })
+                .catch(error => console.error('Error:', error));
         }
 
         if (searchInput) {
-            searchInput.addEventListener('input', function() {
+            searchInput.addEventListener('input', function () {
                 clearTimeout(debounceTimer);
                 const searchTerm = this.value;
                 debounceTimer = setTimeout(() => {
-                    fetchData('{{ route('regions.index') }}', searchTerm);
-                }, 500);
+                    fetchData('{{ route('locations.index') }}', searchTerm);
+                }, 400);
             });
         }
 
-        // Handle pagination clicks via AJAX
-        document.addEventListener('click', function(e) {
+        document.addEventListener('click', function (e) {
             const paginationLink = e.target.closest('#paginationContainer a');
             if (paginationLink) {
                 e.preventDefault();
-                const url = paginationLink.getAttribute('href');
-                const searchTerm = searchInput ? searchInput.value : '';
-                fetchData(url, searchTerm);
+                fetchData(paginationLink.getAttribute('href'), searchInput ? searchInput.value : '');
             }
         });
     });
+
+    @if($errors->any())
+        openModal();
+    @endif
 </script>
 @endsection
-
