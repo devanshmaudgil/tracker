@@ -947,7 +947,7 @@
                     <img src="{{ asset('logo.png') }}" alt="RADiiX INFINITEii" class="brand-logo">
                     <h1 class="brand-title">RADiiX <span>INFINITEii</span></h1>
                     <p class="brand-tagline">Passion. Purpose. Pride.</p>
-                    <p class="brand-desc">Your <span class="brand-desc-gold">Intelligent Recruitment Command Center</span> - Track candidates in real time.</p>
+                    <p class="brand-desc">Your <span class="brand-desc-gold">Intelligent Recruitment Command Center</span> - Track operations in real time.</p>
                     <div class="brand-stats">
                         <div class="stat-item">
                             <div class="stat-value">AI</div>

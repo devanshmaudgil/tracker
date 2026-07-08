@@ -15,6 +15,7 @@ class UserLogin extends Authenticatable
         'staff_user_id',
         'username',
         'password',
+        'password_policy_compliant',
         'remember_token',
         'remarks',
         'created_by',
@@ -30,6 +31,7 @@ class UserLogin extends Authenticatable
     {
         return [
             'password' => 'hashed',
+            'password_policy_compliant' => 'boolean',
         ];
     }
 

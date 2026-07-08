@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\StaffUser;
 use App\Models\UserLogin;
+use App\Rules\StrongPassword;
 use App\Services\Storage\ToolStorage;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -38,7 +39,7 @@ class StaffUserController extends Controller
 
         $rules = [
             'username' => 'required|string|max:255|unique:user_login,username',
-            'password' => 'required|string|min:8|confirmed',
+            'password' => ['required', 'string', 'confirmed', new StrongPassword()],
             'profile_photo' => 'nullable|file|mimes:jpg,jpeg,png|max:2048',
             'date_of_birth' => 'nullable|date',
             'phone_number' => 'nullable|string|max:50',
@@ -66,6 +67,7 @@ class StaffUserController extends Controller
                 'staff_user_id' => $staff->id,
                 'username' => $staff->username,
                 'password' => $request->input('password'),
+                'password_policy_compliant' => true,
                 'remarks' => $staff->remarks,
                 'created_by' => $this->actorName(),
                 'updated_by' => $this->actorName(),
@@ -99,9 +101,16 @@ class StaffUserController extends Controller
         $loginId = $user->loginAccount?->id;
         $needsLogin = !$user->loginAccount;
 
+        $passwordRules = [$needsLogin ? 'required' : 'nullable'];
+        if ($needsLogin || $request->filled('password')) {
+            $passwordRules[] = 'string';
+            $passwordRules[] = 'confirmed';
+            $passwordRules[] = new StrongPassword();
+        }
+
         $request->validate([
             'username' => 'required|string|max:255|unique:staff_users,username,' . $id . '|unique:user_login,username,' . ($loginId ?? 'NULL'),
-            'password' => ($needsLogin ? 'required' : 'nullable') . '|string|min:8|confirmed',
+            'password' => $passwordRules,
             'profile_photo' => 'nullable|file|mimes:jpg,jpeg,png|max:2048',
             'date_of_birth' => 'nullable|date',
             'phone_number' => 'nullable|string|max:50',
@@ -124,6 +133,7 @@ class StaffUserController extends Controller
 
             if ($request->filled('password')) {
                 $loginPayload['password'] = $request->input('password');
+                $loginPayload['password_policy_compliant'] = true;
             }
 
             if ($user->loginAccount) {
@@ -132,6 +142,7 @@ class StaffUserController extends Controller
                 UserLogin::create(array_merge($loginPayload, [
                     'staff_user_id' => $user->id,
                     'password' => $request->input('password'),
+                    'password_policy_compliant' => true,
                     'created_by' => $this->actorName(),
                 ]));
             }

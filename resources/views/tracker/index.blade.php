@@ -923,12 +923,12 @@
     }
 
     .tab-item.active {
-        background: linear-gradient(135deg, var(--dash-teal) 0%, #0f3d38 100%);
-        color: #fff;
+        background: linear-gradient(135deg, var(--dash-gold) 0%, #ffe4a8 100%);
+        color: var(--dash-teal);
         font-weight: 700;
-        border-color: var(--dash-teal);
-        border-bottom-color: var(--dash-teal);
-        box-shadow: 0 -3px 12px rgba(10, 45, 41, 0.22);
+        border-color: rgba(241, 205, 134, 0.85);
+        border-bottom-color: var(--dash-gold);
+        box-shadow: 0 -3px 12px rgba(241, 205, 134, 0.35);
         z-index: 3;
         transform: translateY(-1px);
         padding-bottom: 11px;
@@ -942,7 +942,7 @@
         right: 8px;
         height: 3px;
         border-radius: 0 0 3px 3px;
-        background: linear-gradient(90deg, var(--dash-gold) 0%, #ffe4a8 50%, var(--dash-gold) 100%);
+        background: linear-gradient(90deg, var(--dash-teal) 0%, #0f3d38 50%, var(--dash-teal) 100%);
     }
 
     .tab-icon-wrap {
@@ -958,7 +958,7 @@
     }
 
     .tab-item.active .tab-icon-wrap {
-        background: rgba(255, 255, 255, 0.16);
+        background: rgba(10, 45, 41, 0.1);
     }
 
     .tab-icon {
@@ -970,7 +970,7 @@
 
     .tab-item.active .tab-icon {
         opacity: 1;
-        color: #fff;
+        color: var(--dash-teal);
     }
 
     .tab-label {
@@ -994,9 +994,9 @@
     }
 
     .tab-item.active .tab-badge {
-        background: var(--dash-gold);
-        color: var(--dash-teal);
-        border-color: var(--dash-gold);
+        background: var(--dash-teal);
+        color: #fff;
+        border-color: var(--dash-teal);
     }
 
     .tab-item:not(.active) .tab-badge {
@@ -1012,20 +1012,20 @@
     }
 
     .tab-item--unserved.active {
-        background: linear-gradient(135deg, #ea580c 0%, #c2410c 100%);
-        color: #fff;
-        border-color: #ea580c;
-        border-bottom-color: #ea580c;
+        background: linear-gradient(135deg, var(--dash-gold) 0%, #ffe4a8 100%);
+        color: var(--dash-teal);
+        border-color: rgba(241, 205, 134, 0.85);
+        border-bottom-color: var(--dash-gold);
     }
 
     .tab-item--unserved.active::before {
-        background: linear-gradient(90deg, #fdba74 0%, #fb923c 50%, #fdba74 100%);
+        background: linear-gradient(90deg, var(--dash-teal) 0%, #0f3d38 50%, var(--dash-teal) 100%);
     }
 
     .tab-item--unserved.active .tab-badge {
-        background: #fff;
-        color: #c2410c;
-        border-color: #fff;
+        background: var(--dash-teal);
+        color: #fff;
+        border-color: var(--dash-teal);
     }
 
     .tab-item.is-loading {

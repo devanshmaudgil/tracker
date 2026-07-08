@@ -728,7 +728,7 @@
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                         Assign
                     </button>
-                    <button type="button" class="btn-i btn-accent-i" onclick="openModal('createCandidateModal')">
+                    <button type="button" class="btn-i btn-accent-i" onclick="openCreateCandidateModal()">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>
                         New Candidate
                     </button>
@@ -1149,13 +1149,21 @@ function openRejectModal(tcId, candidateName) {
 
 // ─── Create Candidate Modal ───────────────────────────────────────────────────
 function openCreateCandidateModal() { openModal('createCandidateModal'); }
-    function closeCreateCandidateModal() {
+function closeCreateCandidateModal() {
     closeModal('createCandidateModal');
-        setTimeout(() => {
+    setTimeout(() => {
         const form = document.getElementById('createCandidateForm');
         if (form) form.reset();
-        }, 300);
-    }
+        const locationHidden = document.getElementById('create_location_id');
+        if (locationHidden) locationHidden.value = '';
+        const locationSearch = document.getElementById('location_search');
+        if (locationSearch) locationSearch.value = '';
+        const dropzone = document.getElementById('createResumeDropzone');
+        const fileNameEl = document.getElementById('createResumeFileName');
+        if (dropzone) dropzone.classList.remove('has-file', 'is-dragover');
+        if (fileNameEl) fileNameEl.textContent = '';
+    }, 300);
+}
 
 // ─── Select2 init ─────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', function() {
@@ -1189,7 +1197,8 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         });
         document.addEventListener('click', function(e) {
-            if (!locationSearch.contains(e.target) && !locationDrop.contains(e.target)) {
+            const wrap = locationSearch.closest('.cc-loc-wrap');
+            if (wrap && !wrap.contains(e.target)) {
                 locationDrop.style.display = 'none';
             }
         });

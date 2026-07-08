@@ -218,16 +218,51 @@
             display: flex;
             align-items: center;
             justify-content: center;
+            color: var(--gold);
+            transition: color 0.25s ease;
         }
 
         .menu-icon svg {
             width: 18px;
             height: 18px;
-            stroke: currentColor;
+            stroke: var(--gold);
             fill: none;
             stroke-width: 2;
             stroke-linecap: round;
             stroke-linejoin: round;
+            transition: stroke 0.25s ease, fill 0.25s ease;
+        }
+
+        .sidebar-menu a:hover .menu-icon,
+        .sidebar-menu a:hover .menu-icon svg {
+            color: var(--gold-bright);
+            stroke: var(--gold-bright);
+        }
+
+        .sidebar-menu a.active .menu-icon,
+        .sidebar-menu a.active .menu-icon svg {
+            color: var(--teal-deep);
+            stroke: var(--teal-deep);
+        }
+
+        .dropdown-btn.active .menu-icon,
+        .dropdown-btn.active .menu-icon svg {
+            color: var(--gold-bright);
+            stroke: var(--gold-bright);
+        }
+
+        .sidebar-footer .menu-icon,
+        .sidebar-footer .menu-icon svg {
+            color: var(--gold);
+            stroke: var(--gold);
+        }
+
+        .sidebar-footer a:hover .menu-icon,
+        .sidebar-footer a:hover .menu-icon svg,
+        .sidebar-footer a.active .menu-icon,
+        .sidebar-footer a.active .menu-icon svg {
+            color: var(--gold-bright);
+            stroke: var(--gold-bright);
         }
 
         .menu-label {
@@ -1054,6 +1089,14 @@
                                 <div class="topbar-user-dropdown-name">{{ Auth::user()->username ?? 'User' }}</div>
                                 <div class="topbar-user-dropdown-label">Signed in</div>
                             </div>
+                            <a href="{{ route('attendance.index') }}" class="topbar-user-dropdown-item" role="menuitem">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                                Mark Attendance
+                            </a>
+                            <a href="{{ route('notes.index') }}" class="topbar-user-dropdown-item" role="menuitem">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21h6"/><path d="M10 2H7a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7l-9-5z"/><path d="M14 2v5h5"/></svg>
+                                Notes & Tasks
+                            </a>
                             <form method="POST" action="{{ route('logout') }}" style="margin:0;">
                                 @csrf
                                 <button type="submit" class="topbar-user-dropdown-item topbar-user-dropdown-item--logout" role="menuitem">

@@ -449,4 +449,129 @@
         line-height: 1;
         font-size: 18px;
     }
+
+    /* Password policy alert */
+    .pwd-policy-alert {
+        margin: 0 0 16px;
+        padding: 14px 16px;
+        border-radius: 10px;
+        border: 1px solid #fde68a;
+        background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+        display: flex;
+        gap: 12px;
+        align-items: flex-start;
+    }
+    .pwd-policy-alert__icon {
+        width: 36px;
+        height: 36px;
+        border-radius: 10px;
+        background: rgba(217, 119, 6, 0.12);
+        color: #b45309;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+    .pwd-policy-alert__icon svg { width: 18px; height: 18px; }
+    .pwd-policy-alert__title {
+        margin: 0 0 4px;
+        font-size: 13px;
+        font-weight: 800;
+        color: #92400e;
+    }
+    .pwd-policy-alert__text {
+        margin: 0;
+        font-size: 12.5px;
+        line-height: 1.5;
+        color: #78350f;
+    }
+
+    /* Password strength meter */
+    .pwd-strength {
+        margin-top: 10px;
+        padding: 12px 14px;
+        border: 1px solid #e8ecef;
+        border-radius: 10px;
+        background: #fafbfc;
+    }
+    .pwd-strength__head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 8px;
+    }
+    .pwd-strength__label {
+        font-size: 11px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: var(--u-muted);
+    }
+    .pwd-strength__value {
+        font-size: 12px;
+        font-weight: 800;
+        color: #6b7280;
+    }
+    .pwd-strength__value[data-level="weak"] { color: #dc2626; }
+    .pwd-strength__value[data-level="fair"] { color: #d97706; }
+    .pwd-strength__value[data-level="good"] { color: #2563eb; }
+    .pwd-strength__value[data-level="strong"] { color: #059669; }
+
+    .pwd-strength__bar {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 5px;
+        margin-bottom: 10px;
+    }
+    .pwd-strength__segment {
+        height: 5px;
+        border-radius: 999px;
+        background: #e5e7eb;
+        transition: background 0.2s ease, transform 0.2s ease;
+    }
+    .pwd-strength__bar[data-level="weak"] .pwd-strength__segment.is-active { background: #ef4444; }
+    .pwd-strength__bar[data-level="fair"] .pwd-strength__segment.is-active { background: #f59e0b; }
+    .pwd-strength__bar[data-level="good"] .pwd-strength__segment.is-active { background: #3b82f6; }
+    .pwd-strength__bar[data-level="strong"] .pwd-strength__segment.is-active { background: #10b981; }
+
+    .pwd-strength__checks {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 4px 12px;
+    }
+    @media (max-width: 520px) {
+        .pwd-strength__checks { grid-template-columns: 1fr; }
+    }
+    .pwd-strength__checks li {
+        font-size: 11px;
+        color: #9ca3af;
+        padding-left: 18px;
+        position: relative;
+        line-height: 1.4;
+        transition: color 0.15s ease;
+    }
+    .pwd-strength__checks li::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 3px;
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        border: 1.5px solid #d1d5db;
+        background: #fff;
+        transition: all 0.15s ease;
+    }
+    .pwd-strength__checks li.is-met {
+        color: #065f46;
+        font-weight: 600;
+    }
+    .pwd-strength__checks li.is-met::before {
+        border-color: #10b981;
+        background: #10b981;
+        box-shadow: inset 0 0 0 2px #fff;
+    }
 </style>

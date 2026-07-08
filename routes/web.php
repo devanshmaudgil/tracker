@@ -13,6 +13,8 @@ use App\Http\Controllers\CandidateSearchController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\CalendarController;
 use App\Http\Controllers\WelcomeController;
+use App\Http\Controllers\AttendanceController;
+use App\Http\Controllers\NotesController;
 
 Route::get('/', function () {
     if (auth()->check()) {
@@ -93,4 +95,17 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/candidate-search', [CandidateSearchController::class, 'index'])->name('candidates.search.index');
     Route::post('/candidate-search', [CandidateSearchController::class, 'search'])->name('candidates.search.submit');
+
+    Route::get('/attendance', [AttendanceController::class, 'index'])->name('attendance.index');
+    Route::post('/attendance/check-in', [AttendanceController::class, 'checkIn'])->name('attendance.check-in');
+    Route::post('/attendance/check-out', [AttendanceController::class, 'checkOut'])->name('attendance.check-out');
+
+    Route::post('/attendance/{id}/remarks', [AttendanceController::class, 'updateRemarks'])->name('attendance.remarks.save');
+
+    Route::get('/notes', [NotesController::class, 'index'])->name('notes.index');
+    Route::post('/notes', [NotesController::class, 'store'])->name('notes.store');
+    Route::get('/notes/{id}/edit', [NotesController::class, 'edit'])->name('notes.edit');
+    Route::put('/notes/{id}', [NotesController::class, 'update'])->name('notes.update');
+    Route::post('/notes/{id}/toggle', [NotesController::class, 'toggle'])->name('notes.toggle');
+    Route::delete('/notes/{id}', [NotesController::class, 'destroy'])->name('notes.destroy');
 });

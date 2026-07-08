@@ -84,4 +84,9 @@ class StaffUser extends Model
     {
         return $this->hasOne(UserLogin::class, 'staff_user_id');
     }
+
+    public function attendanceRecords()
+    {
+        return $this->hasMany(AttendanceRecord::class, 'staff_user_id');
+    }
 }

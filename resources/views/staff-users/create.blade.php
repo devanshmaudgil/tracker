@@ -46,10 +46,12 @@
                             <span class="form-hint">Used to sign in to the system. If this person already exists as a profile without login, saving will enable their access.</span>
                         </div>
                         <div class="form-field"></div>
-                        <div class="form-field">
+                        <div class="form-field form-field--full">
                             <label for="password">Password <span class="req">*</span></label>
-                            <input type="password" id="password" name="password" required autocomplete="new-password" placeholder="Min. 8 characters">
+                            <input type="password" id="password" name="password" required autocomplete="new-password" placeholder="Create a strong password">
                             @error('password')<span class="form-error">{{ $message }}</span>@enderror
+                            @include('staff-users._password_strength')
+                            <span class="form-hint">Must be 8+ characters with an uppercase letter, number, and special character.</span>
                         </div>
                         <div class="form-field">
                             <label for="password_confirmation">Confirm Password <span class="req">*</span></label>

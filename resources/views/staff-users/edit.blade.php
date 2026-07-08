@@ -43,9 +43,33 @@
                         <p class="form-hint" style="margin: 0 0 14px;">Login account is active. Leave password blank to keep the current one.</p>
                     @else
                         <div style="margin:0 0 14px;padding:12px 14px;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;font-size:13px;color:#991b1b;">
-                            <strong>No login account.</strong> This profile exists but cannot sign in yet. Set a password below (min. 8 characters) to enable access.
+                            <strong>No login account.</strong> This profile exists but cannot sign in yet. Set a password below to enable access.
                         </div>
                     @endif
+
+                    @php
+                        $isOwnProfile = auth()->user()?->staff_user_id === $user->id;
+                        $passwordNeedsUpdate = $user->loginAccount && ! $user->loginAccount->password_policy_compliant;
+                    @endphp
+
+                    @if($passwordNeedsUpdate)
+                        <div class="pwd-policy-alert">
+                            <div class="pwd-policy-alert__icon" aria-hidden="true">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v2m0 4h.01"/><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/></svg>
+                            </div>
+                            <div>
+                                <p class="pwd-policy-alert__title">Password update recommended</p>
+                                <p class="pwd-policy-alert__text">
+                                    @if($isOwnProfile)
+                                        Your current password does not meet the updated security requirements (uppercase, number, and special character). You can continue signing in as usual — please set a new password below when convenient.
+                                    @else
+                                        This user's current password does not meet the updated security requirements. They can still sign in — set a new compliant password below to update their credentials.
+                                    @endif
+                                </p>
+                            </div>
+                        </div>
+                    @endif
+
                     <div class="form-grid">
                         <div class="form-field">
                             <label for="username">Username <span class="req">*</span></label>
@@ -53,10 +77,12 @@
                             @error('username')<span class="form-error">{{ $message }}</span>@enderror
                         </div>
                         <div class="form-field"></div>
-                        <div class="form-field">
+                        <div class="form-field form-field--full">
                             <label for="password">{{ $user->loginAccount ? 'New Password' : 'Password' }} @if(!$user->loginAccount)<span class="req">*</span>@endif</label>
-                            <input type="password" id="password" name="password" autocomplete="new-password" placeholder="{{ $user->loginAccount ? 'Leave blank to keep current' : 'Min. 8 characters' }}" @if(!$user->loginAccount) required @endif>
+                            <input type="password" id="password" name="password" autocomplete="new-password" placeholder="{{ $user->loginAccount ? 'Leave blank to keep current' : 'Create a strong password' }}" @if(!$user->loginAccount) required @endif>
                             @error('password')<span class="form-error">{{ $message }}</span>@enderror
+                            @include('staff-users._password_strength')
+                            <span class="form-hint">Must be 8+ characters with an uppercase letter, number, and special character.</span>
                         </div>
                         <div class="form-field">
                             <label for="password_confirmation">Confirm Password @if(!$user->loginAccount)<span class="req">*</span>@endif</label>
