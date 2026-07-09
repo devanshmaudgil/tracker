@@ -277,7 +277,7 @@
         }
         if (empty) empty.hidden = true;
         body.innerHTML = rows.map(function (row) {
-            const url = '/tracker/info/' + row.id;
+            const url = row.url || (window.APP_BASE_URL || '') + '/tracker/info/' + row.id;
             const prio = escapeHtml(row.priority);
             return '<tr>'
                 + '<td>#' + escapeHtml(row.id) + '</td>'

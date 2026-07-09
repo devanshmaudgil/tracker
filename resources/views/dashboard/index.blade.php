@@ -365,6 +365,7 @@
     window.DASHBOARD_POSITIONS_URL = @json(route('dashboard.positions'));
     window.DASHBOARD_KPI_URL = @json(url('/dashboard/kpi'));
     window.DASHBOARD_EXPORT_URL = @json(route('dashboard.export'));
+    window.APP_BASE_URL = @json(rtrim(url('/'), '/'));
 </script>
 @include('dashboard._scripts')
 @endpush
