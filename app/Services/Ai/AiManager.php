@@ -10,7 +10,7 @@ class AiManager
 {
     public function driver(?string $name = null): AiClient
     {
-        $name = $name ?: (string) config('ai.default', 'ollama');
+        $name = $name ?: (string) config('ai.default', 'gemini');
 
         return match ($name) {
             'ollama' => app(OllamaClient::class),
@@ -27,7 +27,7 @@ class AiManager
             'provider' => $client->providerName(),
             'model' => $client->modelName(),
             'available' => $client->isAvailable(),
-            'driver' => $name ?: (string) config('ai.default', 'ollama'),
+            'driver' => $name ?: (string) config('ai.default', 'gemini'),
         ];
     }
 

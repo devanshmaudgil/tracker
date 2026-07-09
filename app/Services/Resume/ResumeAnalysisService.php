@@ -22,7 +22,7 @@ class ResumeAnalysisService
         ?string $progressToken = null,
         ?callable $onProgress = null,
     ): array {
-        $client = $this->ai->ensureAvailable();
+        $client = $this->ai->ensureAvailable('gemini');
 
         $this->reportProgress($progressToken, $onProgress, 'extract', 'Reading resume document…', 18);
         $resumeText = $this->pdfTextExtractor->extractFromPath($resumePath);

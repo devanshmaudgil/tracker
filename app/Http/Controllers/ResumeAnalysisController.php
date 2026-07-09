@@ -15,7 +15,7 @@ class ResumeAnalysisController extends Controller
     public function index(AiManager $ai)
     {
         return view('resume.analysis', [
-            'aiStatus' => $ai->status(),
+            'aiStatus' => $ai->status('gemini'),
         ]);
     }
 
@@ -81,7 +81,7 @@ class ResumeAnalysisController extends Controller
             }
 
             return view('resume.analysis', [
-                'aiStatus' => app(AiManager::class)->status(),
+                'aiStatus' => app(AiManager::class)->status('gemini'),
                 'jobDescription' => $validated['job_description'],
                 'resumeAnalysis' => $result['analysis'],
                 'analysisSections' => $result['sections'] ?? null,

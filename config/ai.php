@@ -10,7 +10,7 @@ return [
     | Supported: "ollama", "gemini"
     |
     */
-    'default' => env('AI_PROVIDER', 'ollama'),
+    'default' => env('AI_PROVIDER', 'gemini'),
 
     'providers' => [
 
